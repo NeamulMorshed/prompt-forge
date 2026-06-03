@@ -1,11 +1,10 @@
 import fakeredis
 import pytest
-from unittest.mock import MagicMock
 
 from app.llm.providers.mock_provider import MockProvider
 from app.llm.router import LLMRouter
 from app.llm.types import CompletionResult
-from app.pipeline.orchestrator import Orchestrator, TurnResult
+from app.pipeline.orchestrator import Orchestrator
 from app.pipeline.session import SessionStore
 
 
@@ -61,7 +60,7 @@ def test_answer_increments_question_count(store):
     session_id = start.session_id
     slot_id = start.question.slot_id
 
-    result = orch.answer(session_id=session_id, slot_id=slot_id, answer="Get beta signups")
+    orch.answer(session_id=session_id, slot_id=slot_id, answer="Get beta signups")
     session = store.get(session_id)
     assert session.questions_asked == 1
     assert session.filled_slots.get(slot_id) == "Get beta signups"

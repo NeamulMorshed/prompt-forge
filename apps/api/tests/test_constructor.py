@@ -1,4 +1,4 @@
-from app.pipeline.assembler import ContextObject, ContextValue, assemble
+from app.pipeline.assembler import ContextObject, assemble
 from app.pipeline.constructor import construct
 
 

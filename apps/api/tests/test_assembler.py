@@ -1,4 +1,4 @@
-from app.pipeline.assembler import ContextObject, ContextValue, assemble
+from app.pipeline.assembler import assemble
 
 
 def test_session_overrides_domain_default():

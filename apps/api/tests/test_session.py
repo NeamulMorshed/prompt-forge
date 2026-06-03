@@ -1,7 +1,7 @@
 import fakeredis
 import pytest
 
-from app.pipeline.session import SessionStore, SessionState
+from app.pipeline.session import SessionStore
 
 
 @pytest.fixture()

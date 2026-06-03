@@ -1,5 +1,5 @@
 import pytest
-from app.pipeline.crs_loader import Slot, load_crs, load_domain_defaults
+from app.pipeline.crs_loader import load_crs, load_domain_defaults
 
 
 def test_load_marketing_content_returns_slots():

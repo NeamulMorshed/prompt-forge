@@ -1,11 +1,10 @@
-import json
 from unittest.mock import MagicMock
 
 from app.llm.providers.mock_provider import MockProvider
 from app.llm.router import LLMRouter
 from app.llm.types import CompletionResult
 from app.pipeline.crs_loader import Slot
-from app.pipeline.discovery import Question, apply_answer, next_question
+from app.pipeline.discovery import apply_answer, next_question
 
 _SLOTS = [
     Slot(id="goal",     weight=0.20, required=True,  hint="What outcome do you want?"),
