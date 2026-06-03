@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { authRequest, fetchMe } from "@/lib/api";
 
@@ -23,6 +24,9 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
       <h1 className="text-2xl font-bold">PromptForge</h1>
+      <Link href="/generate" className="text-blue-600 hover:underline">
+        Try prompt generation →
+      </Link>
       <input
         className="border rounded px-3 py-2 w-72"
         placeholder="email"
