@@ -31,7 +31,7 @@ def test_router_unknown_stage_falls_back_to_construct_route():
     primary = _StubProvider()
     router = LLMRouter(primary=primary, fallback=_StubProvider())
     router.complete("does-not-exist", [{"role": "user", "content": "hi"}])
-    assert primary.calls == ["groq/llama-3.1-8b-instant"]
+    assert primary.calls == ["gemini/gemini-2.0-flash"]
 
 
 def test_router_fails_over_to_fallback_on_error():

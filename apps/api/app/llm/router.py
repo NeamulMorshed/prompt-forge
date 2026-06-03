@@ -6,18 +6,21 @@ from app.llm.types import CompletionResult
 
 logger = logging.getLogger("app.llm.router")
 
-# Phase 0: single real provider (Groq). Gemini/Anthropic added in Phase 1.
 ROUTING = {
-    "classify": "groq/llama-3.1-8b-instant",
-    "phrase_q": "groq/llama-3.1-8b-instant",
-    "construct": "groq/llama-3.1-8b-instant",
-    "evaluate": "groq/llama-3.1-8b-instant",
-    "paid_construct": "groq/llama-3.1-8b-instant",
-    "paid_evaluate": "groq/llama-3.1-8b-instant",
+    "classify":       "groq/llama-3.1-8b-instant",
+    "phrase_q":       "groq/llama-3.1-8b-instant",
+    "construct":      "gemini/gemini-2.0-flash",
+    "evaluate":       "gemini/gemini-2.0-flash",
+    "paid_construct": "anthropic/claude-sonnet-4-6",
+    "paid_evaluate":  "anthropic/claude-sonnet-4-6",
 }
 
-# Rough per-token cost estimate for logging (USD). Groq free tier is $0; placeholder for paid.
-_COST_PER_1K_TOKENS = 0.0
+_COST_PER_1K_TOKENS: dict[str, float] = {
+    "groq":      0.0,
+    "gemini":    0.0,
+    "anthropic": 0.003,
+    "mock":      0.0,
+}
 
 
 class LLMRouter:
@@ -33,23 +36,23 @@ class LLMRouter:
         model = self._model_for(stage, user_plan)
         try:
             result = self._primary.complete(model, messages)
-        except Exception as exc:  # noqa: BLE001 — failover is intentional
+        except Exception as exc:  # noqa: BLE001
             logger.warning("primary provider failed (%s); falling back", exc)
             result = self._fallback.complete(model, messages)
         self._log_cost(stage, result)
         return result
 
     def _log_cost(self, stage: str, result: CompletionResult) -> None:
+        provider_prefix = result.model.split("/")[0] if "/" in result.model else "mock"
+        rate = _COST_PER_1K_TOKENS.get(provider_prefix, 0.0)
         total = result.prompt_tokens + result.completion_tokens
-        est_cost = total / 1000 * _COST_PER_1K_TOKENS
+        est_cost = total / 1000 * rate
         logger.info(
-            json.dumps(
-                {
-                    "stage": stage,
-                    "model": result.model,
-                    "prompt_tokens": result.prompt_tokens,
-                    "completion_tokens": result.completion_tokens,
-                    "est_cost_usd": round(est_cost, 6),
-                }
-            )
+            json.dumps({
+                "stage": stage,
+                "model": result.model,
+                "prompt_tokens": result.prompt_tokens,
+                "completion_tokens": result.completion_tokens,
+                "est_cost_usd": round(est_cost, 6),
+            })
         )
