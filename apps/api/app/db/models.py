@@ -3,6 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
     Float,
     ForeignKey,
@@ -51,12 +52,13 @@ class Workspace(Base):
 class ContextProfile(Base):
     __tablename__ = "context_profiles"
     id: Mapped[uuid.UUID] = _pk()
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"))
-    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("workspaces.id"), nullable=True
-    )
-    name: Mapped[str] = mapped_column(String)
-    context_json: Mapped[dict | None] = mapped_column(_Json, nullable=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String, default="My defaults")
+    is_default: Mapped[bool] = mapped_column(Boolean, default=True)
+    core_context: Mapped[dict] = mapped_column(_Json, default=dict)
+    domain_overrides: Mapped[dict] = mapped_column(_Json, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class DomainPack(Base):
