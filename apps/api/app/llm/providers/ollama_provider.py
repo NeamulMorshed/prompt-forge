@@ -13,8 +13,9 @@ class OllamaProvider(Provider):
         self._default_model = model
 
     def complete(self, model: str, messages: list[dict]) -> CompletionResult:
-        # Strip routing prefix (e.g. "ollama/mistral" → "mistral")
-        sdk_model = model.split("/", 1)[1] if "/" in model else self._default_model
+        # Use default model — routing table may carry groq/gemini prefixes not valid for Ollama
+        stripped = model.split("/", 1)[1] if "/" in model else model
+        sdk_model = stripped if model.startswith("ollama/") else self._default_model
         payload = json.dumps({"model": sdk_model, "messages": messages, "stream": False}).encode()
         req = urllib.request.Request(
             f"{self._base_url}/api/chat",
