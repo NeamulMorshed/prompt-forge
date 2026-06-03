@@ -19,6 +19,7 @@ _COST_PER_1K_TOKENS: dict[str, float] = {
     "groq":      0.0,
     "gemini":    0.0,
     "anthropic": 0.003,
+    "ollama":    0.0,
     "mock":      0.0,
 }
 

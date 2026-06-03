@@ -1,0 +1,13 @@
+{
+  "domain": "general",
+  "description": "General-purpose prompt for any task not matching a specific domain",
+  "slots": [
+    { "id": "goal",       "weight": 0.30, "required": true,  "hint": "What do you want to achieve or create?" },
+    { "id": "context",    "weight": 0.25, "required": true,  "hint": "What background context is relevant?" },
+    { "id": "audience",   "weight": 0.15, "required": false, "hint": "Who is this for?" },
+    { "id": "tone",       "weight": 0.12, "required": false, "hint": "What tone or style?" },
+    { "id": "format",     "weight": 0.10, "required": false, "hint": "What output format do you need?" },
+    { "id": "constraints","weight": 0.08, "required": false, "hint": "Any constraints or things to avoid?" }
+  ],
+  "domain_defaults": {}
+}
