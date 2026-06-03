@@ -1,0 +1,100 @@
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.config import settings
+from app.db.base import get_db
+from app.db.models import OutcomeRating, PromptVersion
+from app.llm.factory import build_router
+from app.pipeline.orchestrator import Orchestrator
+from app.pipeline.schemas import (
+    AnswerRequest,
+    GenerationResultOut,
+    QuestionOut,
+    RateRequest,
+    RateResponse,
+    RunRequest,
+    RunResponse,
+    ScoreOut,
+    StartRequest,
+    TurnResponse,
+)
+from app.pipeline.session import SessionStore
+
+router = APIRouter(prefix="/generate", tags=["generate"])
+
+_llm_router = build_router(
+    groq_api_key=settings.groq_api_key,
+    gemini_api_key=settings.gemini_api_key,
+)
+_session_store = SessionStore()
+
+
+def _turn_to_response(turn) -> TurnResponse:
+    question_out = None
+    if turn.question:
+        question_out = QuestionOut(
+            slot_id=turn.question.slot_id,
+            question=turn.question.question,
+            chips=turn.question.chips,
+            allow_freetext=turn.question.allow_freetext,
+        )
+    result_out = None
+    if turn.result:
+        result_out = GenerationResultOut(
+            prompt=turn.result.prompt,
+            score=ScoreOut(
+                composite=turn.result.score.composite,
+                dimensions=turn.result.score.dimensions,
+                suggestions=turn.result.score.suggestions,
+            ),
+            prompt_version_id=turn.result.prompt_version_id,
+        )
+    return TurnResponse(
+        session_id=turn.session_id,
+        status=turn.status,
+        question=question_out,
+        result=result_out,
+    )
+
+
+@router.post("/start", response_model=TurnResponse)
+def start_generation(body: StartRequest, db: Session = Depends(get_db)) -> TurnResponse:
+    orch = Orchestrator(router=_llm_router, store=_session_store, db=db)
+    turn = orch.start(initial_input=body.input, user_id=None)
+    return _turn_to_response(turn)
+
+
+@router.post("/answer", response_model=TurnResponse)
+def submit_answer(body: AnswerRequest, db: Session = Depends(get_db)) -> TurnResponse:
+    orch = Orchestrator(router=_llm_router, store=_session_store, db=db)
+    try:
+        turn = orch.answer(session_id=body.session_id, slot_id=body.slot_id, answer=body.answer)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return _turn_to_response(turn)
+
+
+@router.post("/run", response_model=RunResponse)
+def run_prompt(body: RunRequest, db: Session = Depends(get_db)) -> RunResponse:
+    version = db.get(PromptVersion, uuid.UUID(body.prompt_version_id))
+    if version is None:
+        raise HTTPException(status_code=404, detail="PromptVersion not found")
+    result = _llm_router.complete("construct", [{"role": "user", "content": version.content}])
+    return RunResponse(output=result.text)
+
+
+@router.post("/rate", response_model=RateResponse)
+def rate_prompt(body: RateRequest, db: Session = Depends(get_db)) -> RateResponse:
+    version = db.get(PromptVersion, uuid.UUID(body.prompt_version_id))
+    if version is None:
+        raise HTTPException(status_code=404, detail="PromptVersion not found")
+    rating = OutcomeRating(
+        prompt_version_id=uuid.UUID(body.prompt_version_id),
+        rating=body.rating,
+        feedback=body.feedback,
+    )
+    db.add(rating)
+    db.commit()
+    return RateResponse(ok=True)
