@@ -140,6 +140,7 @@ class Orchestrator:
             status="complete",
         )
         self._db.merge(db_session)
+        self._db.flush()
 
         prompt_id = uuid.uuid4()
         db_prompt = Prompt(
