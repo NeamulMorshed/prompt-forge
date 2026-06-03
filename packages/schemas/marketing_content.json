@@ -1,0 +1,17 @@
+{
+  "domain": "marketing_content",
+  "description": "Direct-response marketing copy: emails, social posts, ads, landing pages",
+  "slots": [
+    { "id": "goal",         "weight": 0.20, "required": true,  "hint": "What outcome do you want from this content?" },
+    { "id": "audience",     "weight": 0.18, "required": true,  "hint": "Who is your target audience?" },
+    { "id": "channel",      "weight": 0.15, "required": true,  "hint": "What format or channel — email, LinkedIn, Twitter, blog, ad?" },
+    { "id": "tone",         "weight": 0.12, "required": false, "hint": "What brand voice or tone?" },
+    { "id": "constraints",  "weight": 0.10, "required": false, "hint": "Any hard constraints — length, words to avoid, compliance needs?" },
+    { "id": "success",      "weight": 0.10, "required": false, "hint": "How will you know this worked?" },
+    { "id": "examples",     "weight": 0.08, "required": false, "hint": "Any examples of content you love or want to emulate?" },
+    { "id": "model_target", "weight": 0.07, "required": false, "hint": "Which AI model will run this prompt?" }
+  ],
+  "domain_defaults": {
+    "tone": "professional and engaging"
+  }
+}

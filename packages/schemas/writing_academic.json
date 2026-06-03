@@ -1,0 +1,17 @@
+{
+  "domain": "writing_academic",
+  "description": "Academic writing: essays, papers, literature reviews, thesis sections, abstracts",
+  "slots": [
+    { "id": "goal",         "weight": 0.20, "required": true,  "hint": "What academic task — argument, summary, analysis, literature review?" },
+    { "id": "topic",        "weight": 0.20, "required": true,  "hint": "What is the specific topic or research question?" },
+    { "id": "audience",     "weight": 0.15, "required": true,  "hint": "Who is the reader — professor, peer reviewer, general academic audience?" },
+    { "id": "level",        "weight": 0.12, "required": false, "hint": "What academic level — undergrad, masters, PhD, journal?" },
+    { "id": "length",       "weight": 0.10, "required": false, "hint": "Target length or word count?" },
+    { "id": "sources",      "weight": 0.10, "required": false, "hint": "Any specific sources, citations, or frameworks to include?" },
+    { "id": "constraints",  "weight": 0.08, "required": false, "hint": "Style guide, formatting, or assignment constraints?" },
+    { "id": "examples",     "weight": 0.05, "required": false, "hint": "Any example passages or style you want to emulate?" }
+  ],
+  "domain_defaults": {
+    "level": "undergraduate"
+  }
+}
