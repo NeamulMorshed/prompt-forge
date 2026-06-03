@@ -13,6 +13,7 @@ dependencies = [
     "argon2-cffi>=23.1",
     "groq>=0.11",
     "python-multipart>=0.0.9",
+    "email-validator>=2.3.0",
 ]
 
 [dependency-groups]
