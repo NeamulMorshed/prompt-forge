@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
     groq_api_key: str = ""
+    gemini_api_key: str = ""
+    anthropic_api_key: str = ""
 
 
 settings = Settings()
