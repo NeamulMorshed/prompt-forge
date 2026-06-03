@@ -1,5 +1,4 @@
 import json
-from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 from app.llm.providers.ollama_provider import OllamaProvider
