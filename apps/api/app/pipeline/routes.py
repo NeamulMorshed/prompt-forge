@@ -3,14 +3,16 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_optional_user
+from app.auth.deps import get_current_user, get_optional_user
 from app.config import settings
 from app.db.base import get_db
-from app.db.models import OutcomeRating, PromptVersion, User
+from app.db.models import OutcomeRating, Prompt, PromptVersion, User
+from app.db.models import Session as SessionModel
 from app.llm.factory import build_router
 from app.pipeline.orchestrator import Orchestrator
 from app.pipeline.schemas import (
     AnswerRequest,
+    BranchRequest,
     GenerationResultOut,
     QuestionOut,
     RateRequest,
@@ -114,3 +116,39 @@ def rate_prompt(body: RateRequest, db: Session = Depends(get_db)) -> RateRespons
     db.add(rating)
     db.commit()
     return RateResponse(ok=True)
+
+
+@router.post("/branch", response_model=TurnResponse)
+def branch_prompt(
+    body: BranchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TurnResponse:
+    try:
+        version_id = uuid.UUID(body.prompt_version_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    version = db.get(PromptVersion, version_id)
+    if version is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    prompt = db.get(Prompt, version.prompt_id)
+    if prompt is None or prompt.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+    db_session = db.get(SessionModel, prompt.session_id) if prompt.session_id else None
+    pre_filled_slots: dict[str, str] = {}
+    initial_input = ""
+    if db_session:
+        pre_filled_slots = db_session.filled_slots or {}
+        initial_input = db_session.initial_input or ""
+
+    orch = Orchestrator(router=_llm_router, store=_session_store, db=db)
+    turn = orch.start(
+        initial_input=initial_input or "branch",
+        user_id=str(current_user.id),
+        pre_filled_slots=pre_filled_slots,
+        branched_from_version_id=str(version_id),
+    )
+    return _turn_to_response(turn)

@@ -25,6 +25,8 @@ class SessionState:
     generated_prompt: str | None = None
     prompt_version_id: str | None = None
     profile_snapshot: dict[str, str] = field(default_factory=dict)
+    pre_filled_slots: dict[str, str] = field(default_factory=dict)
+    branched_from_version_id: str | None = None
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -43,6 +45,8 @@ class SessionStore:
         clarity: float,
         user_id: str | None = None,
         profile_snapshot: dict[str, str] | None = None,
+        pre_filled_slots: dict[str, str] | None = None,
+        branched_from_version_id: str | None = None,
     ) -> SessionState:
         s = SessionState(
             id=str(uuid.uuid4()),
@@ -52,6 +56,9 @@ class SessionStore:
             clarity=clarity,
             user_id=user_id,
             profile_snapshot=profile_snapshot or {},
+            pre_filled_slots=pre_filled_slots or {},
+            branched_from_version_id=branched_from_version_id,
+            filled_slots=pre_filled_slots or {},  # pre-populate filled_slots directly
         )
         self.update(s)
         return s

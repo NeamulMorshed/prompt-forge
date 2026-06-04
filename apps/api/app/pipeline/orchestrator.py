@@ -39,7 +39,14 @@ class Orchestrator:
         self._store = store
         self._db = db
 
-    def start(self, initial_input: str, user_id: str | None, ignore_profile: bool = False) -> TurnResult:
+    def start(
+        self,
+        initial_input: str,
+        user_id: str | None,
+        ignore_profile: bool = False,
+        pre_filled_slots: dict[str, str] | None = None,
+        branched_from_version_id: str | None = None,
+    ) -> TurnResult:
         classification = classify(initial_input, self._router)
         profile_snapshot: dict[str, str] = {}
         if user_id and not ignore_profile:
@@ -51,6 +58,8 @@ class Orchestrator:
             clarity=classification.clarity,
             user_id=user_id,
             profile_snapshot=profile_snapshot,
+            pre_filled_slots=pre_filled_slots,
+            branched_from_version_id=branched_from_version_id,
         )
         return self._next_turn(session)
 
@@ -181,9 +190,26 @@ class Orchestrator:
         self._db.merge(db_session)
         self._db.flush()
 
+        # Determine group_id: inherit from parent on branch, otherwise self-referencing
         prompt_id = uuid.uuid4()
+        group_id = prompt_id  # default: self-referencing root
+        bfv_uuid: uuid.UUID | None = None
+
+        if session.branched_from_version_id:
+            try:
+                bfv_uuid = uuid.UUID(session.branched_from_version_id)
+                parent_version = self._db.get(PromptVersion, bfv_uuid)
+                if parent_version:
+                    parent_prompt = self._db.get(Prompt, parent_version.prompt_id)
+                    if parent_prompt and parent_prompt.group_id:
+                        group_id = parent_prompt.group_id
+            except (ValueError, AttributeError):
+                pass
+
         db_prompt = Prompt(
             id=prompt_id,
+            group_id=group_id,
+            branched_from_version_id=bfv_uuid,
             session_id=db_session_id,
             user_id=db_user_id,
             domain=session.domain,

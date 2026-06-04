@@ -57,3 +57,7 @@ class RateRequest(BaseModel):
 
 class RateResponse(BaseModel):
     ok: bool
+
+
+class BranchRequest(BaseModel):
+    prompt_version_id: str
