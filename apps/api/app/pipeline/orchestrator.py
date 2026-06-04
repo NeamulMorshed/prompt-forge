@@ -8,7 +8,7 @@ from app.llm.router import LLMRouter
 from app.pipeline.assembler import ContextObject, assemble
 from app.pipeline.ccs import compute_ccs
 from app.pipeline.classifier import classify
-from app.pipeline.constructor import construct
+from app.pipeline.constructor import build_modules, construct
 from app.pipeline.crs_loader import load_crs, load_domain_defaults
 from app.pipeline.discovery import Question, apply_answer, next_question
 from app.pipeline.evaluator import ScoreResult, score
@@ -130,15 +130,16 @@ class Orchestrator:
             domain_defaults=domain_defaults,
         )
         model_hint = session.model_target or "gemini-2.0-flash"
-        prompt_text = construct(ctx, model=model_hint)
+        modules = build_modules(ctx, model=model_hint)
+        prompt_text = "\n\n".join(part for part in modules.values() if part.strip())
         score_result = score(prompt_text, ctx, self._router)
 
         if score_result.gate_failures:
             suggestions_note = "Improve: " + ", ".join(score_result.gate_failures)
-            prompt_text = construct(ctx, model=model_hint) + f"\n\n[Self-check: {suggestions_note}]"
+            prompt_text = prompt_text + f"\n\n[Self-check: {suggestions_note}]"
             score_result = score(prompt_text, ctx, self._router)
 
-        prompt_version_id = self._flush_to_db(session, ctx, prompt_text, score_result)
+        prompt_version_id = self._flush_to_db(session, ctx, prompt_text, score_result, modules)
         session.generated_prompt = prompt_text
         session.prompt_version_id = prompt_version_id
         session.status = "complete"
@@ -167,6 +168,7 @@ class Orchestrator:
         ctx: ContextObject,
         prompt_text: str,
         score_result: ScoreResult,
+        modules: dict[str, str] | None = None,
     ) -> str:
         if self._db is None:
             return str(uuid.uuid4())
@@ -232,6 +234,7 @@ class Orchestrator:
                 "dimensions": score_result.dimensions,
                 "suggestions": score_result.suggestions,
             },
+            modules_json=modules,
         )
         self._db.add(db_version)
         self._db.commit()

@@ -67,3 +67,21 @@ class RateResponse(BaseModel):
 
 class BranchRequest(BaseModel):
     prompt_version_id: str
+
+
+_VALID_MODULES = Literal[
+    "role", "objective", "context", "task", "format",
+    "patterns", "examples", "reasoning", "guardrails"
+]
+
+
+class EditModuleRequest(BaseModel):
+    prompt_version_id: str
+    module_name: _VALID_MODULES
+    new_text: str = Field(..., min_length=1, max_length=5000)
+
+
+class EditModuleResponse(BaseModel):
+    new_prompt_version_id: str
+    score: ScoreOut
+    full_prompt: str

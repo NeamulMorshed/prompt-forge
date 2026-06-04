@@ -11,24 +11,29 @@ _DOMAIN_ROLES = {
 _REASONING_MODELS = {"70b", "claude", "gpt-4", "gemini-pro", "gemini-2.5"}
 
 
-def construct(ctx: ContextObject, model: str) -> str:
+def build_modules(ctx: ContextObject, model: str) -> dict[str, str]:
     def get(slot_id: str, default: str = "") -> str:
         v = ctx.slots.get(slot_id)
         return v.value if v else default
 
     raw_parts = [
-        ("role", _role_module(ctx.domain)),
-        ("objective", _objective_module(get)),
-        ("context", _context_module(get)),
-        ("task", _task_module(get)),
-        ("format", _format_module(get)),
-        ("patterns", _patterns_module(ctx.domain)),
-        ("examples", _examples_module(get)),
-        ("reasoning", _reasoning_module(model)),
+        ("role",       _role_module(ctx.domain)),
+        ("objective",  _objective_module(get)),
+        ("context",    _context_module(get)),
+        ("task",       _task_module(get)),
+        ("format",     _format_module(get)),
+        ("patterns",   _patterns_module(ctx.domain)),
+        ("examples",   _examples_module(get)),
+        ("reasoning",  _reasoning_module(model)),
         ("guardrails", _guardrails_module(get)),
     ]
     ctx.skills_applied = [name for name, part in raw_parts if part.strip()]
-    return "\n\n".join(part for _, part in raw_parts if part.strip())
+    return {name: part for name, part in raw_parts}
+
+
+def construct(ctx: ContextObject, model: str) -> str:
+    modules = build_modules(ctx, model)
+    return "\n\n".join(part for part in modules.values() if part.strip())
 
 
 def _role_module(domain: str) -> str:

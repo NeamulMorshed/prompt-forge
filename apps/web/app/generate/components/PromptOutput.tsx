@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { GenerationResult } from "@/lib/generate-api";
+import type { GenerationResult, ScoreOut } from "@/lib/generate-api";
 import { runPrompt, ratePrompt } from "@/lib/generate-api";
+import { ModuleEditor } from "./ModuleEditor";
 
 interface Props {
   result: GenerationResult;
+  onUpdate?: (updates: Partial<GenerationResult>) => void;
 }
 
-export function PromptOutput({ result }: Props) {
+export function PromptOutput({ result, onUpdate }: Props) {
   const [copied, setCopied] = useState(false);
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
@@ -98,6 +100,15 @@ export function PromptOutput({ result }: Props) {
       )}
       {rated !== null && (
         <p className="text-sm text-gray-400">Thanks for the feedback &mdash; it helps improve PromptForge.</p>
+      )}
+      {result.modules && Object.keys(result.modules).length > 0 && onUpdate && (
+        <ModuleEditor
+          promptVersionId={result.prompt_version_id}
+          modules={result.modules}
+          onUpdated={(newVersionId: string, newScore: ScoreOut, fullPrompt: string) => {
+            onUpdate({ prompt_version_id: newVersionId, score: newScore, prompt: fullPrompt });
+          }}
+        />
       )}
       <Link
         href="/library"

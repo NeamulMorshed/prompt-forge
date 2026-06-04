@@ -18,6 +18,7 @@ export interface GenerationResult {
   prompt: string;
   score: ScoreOut;
   prompt_version_id: string;
+  modules?: Record<string, string>;
 }
 
 export interface TurnResponse {
@@ -65,3 +66,16 @@ export const runPrompt = (prompt_version_id: string) =>
 
 export const ratePrompt = (prompt_version_id: string, rating: 1 | -1, feedback?: string) =>
   post<{ ok: boolean }>("/generate/rate", { prompt_version_id, rating, feedback });
+
+export interface EditModuleResponse {
+  new_prompt_version_id: string;
+  score: ScoreOut;
+  full_prompt: string;
+}
+
+export const editModule = (promptVersionId: string, moduleName: string, newText: string) =>
+  post<EditModuleResponse>("/generate/edit-module", {
+    prompt_version_id: promptVersionId,
+    module_name: moduleName,
+    new_text: newText,
+  });

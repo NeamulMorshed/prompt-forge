@@ -10,9 +10,12 @@ from app.db.models import OutcomeRating, Prompt, PromptVersion, User
 from app.db.models import Session as SessionModel
 from app.llm.factory import build_router
 from app.pipeline.orchestrator import Orchestrator
+from app.pipeline.module_editor import edit_module
 from app.pipeline.schemas import (
     AnswerRequest,
     BranchRequest,
+    EditModuleRequest,
+    EditModuleResponse,
     GenerationResultOut,
     QuestionOut,
     RateRequest,
@@ -124,6 +127,37 @@ def rate_prompt(body: RateRequest, db: Session = Depends(get_db)) -> RateRespons
     db.add(rating)
     db.commit()
     return RateResponse(ok=True)
+
+
+@router.post("/edit-module", response_model=EditModuleResponse)
+def edit_prompt_module(
+    body: EditModuleRequest,
+    db: Session = Depends(get_db),
+) -> EditModuleResponse:
+    try:
+        version_id = uuid.UUID(body.prompt_version_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid version ID")
+    try:
+        new_version, score_result = edit_module(
+            version_id=version_id,
+            module_name=body.module_name,
+            new_text=body.new_text,
+            router=_llm_router,
+            db=db,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return EditModuleResponse(
+        new_prompt_version_id=str(new_version.id),
+        score=ScoreOut(
+            composite=score_result.composite,
+            dimensions=score_result.dimensions,
+            suggestions=score_result.suggestions,
+            scored=score_result.scored,
+        ),
+        full_prompt=new_version.content,
+    )
 
 
 @router.post("/branch", response_model=TurnResponse)

@@ -114,6 +114,7 @@ class PromptVersion(Base):
     prompt_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("prompts.id", ondelete="CASCADE"))
     content: Mapped[str] = mapped_column(String)
     score_json: Mapped[dict | None] = mapped_column(_Json, nullable=True)
+    modules_json: Mapped[dict | None] = mapped_column(_Json, nullable=True)
     outcome_label: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
