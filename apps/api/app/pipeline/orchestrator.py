@@ -46,6 +46,7 @@ class Orchestrator:
         ignore_profile: bool = False,
         pre_filled_slots: dict[str, str] | None = None,
         branched_from_version_id: str | None = None,
+        model_target: str | None = None,
     ) -> TurnResult:
         classification = classify(initial_input, self._router)
         profile_snapshot: dict[str, str] = {}
@@ -60,6 +61,7 @@ class Orchestrator:
             profile_snapshot=profile_snapshot,
             pre_filled_slots=pre_filled_slots,
             branched_from_version_id=branched_from_version_id,
+            model_target=model_target or "gemini-2.0-flash",
         )
         return self._next_turn(session)
 
@@ -127,12 +129,13 @@ class Orchestrator:
             profile=session.profile_snapshot or None,
             domain_defaults=domain_defaults,
         )
-        prompt_text = construct(ctx, model="construct")
+        model_hint = session.model_target or "gemini-2.0-flash"
+        prompt_text = construct(ctx, model=model_hint)
         score_result = score(prompt_text, ctx, self._router)
 
         if score_result.gate_failures:
             suggestions_note = "Improve: " + ", ".join(score_result.gate_failures)
-            prompt_text = construct(ctx, model="construct") + f"\n\n[Self-check: {suggestions_note}]"
+            prompt_text = construct(ctx, model=model_hint) + f"\n\n[Self-check: {suggestions_note}]"
             score_result = score(prompt_text, ctx, self._router)
 
         prompt_version_id = self._flush_to_db(session, ctx, prompt_text, score_result)
@@ -213,6 +216,7 @@ class Orchestrator:
             session_id=db_session_id,
             user_id=db_user_id,
             domain=session.domain,
+            model_target=session.model_target,
             skills_applied=ctx.skills_applied,
             score=score_result.composite,
         )

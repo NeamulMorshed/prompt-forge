@@ -78,6 +78,7 @@ def start_generation(
         initial_input=body.input,
         user_id=user_id,
         ignore_profile=body.ignore_profile,
+        model_target=body.model_target,
     )
     return _turn_to_response(turn)
 
@@ -95,12 +96,18 @@ def submit_answer(
     return _turn_to_response(turn)
 
 
+_PAID_MODELS = {"gpt-4o", "claude-sonnet-4-6"}
+
+
 @router.post("/run", response_model=RunResponse)
 def run_prompt(body: RunRequest, db: Session = Depends(get_db)) -> RunResponse:
     version = db.get(PromptVersion, uuid.UUID(body.prompt_version_id))
     if version is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PromptVersion not found")
-    result = _llm_router.complete("construct", [{"role": "user", "content": version.content}])
+    prompt = db.get(Prompt, version.prompt_id)
+    model_target = (prompt.model_target if prompt else None) or "gemini-2.0-flash"
+    stage = "paid_construct" if model_target in _PAID_MODELS else "construct"
+    result = _llm_router.complete(stage, [{"role": "user", "content": version.content}])
     return RunResponse(output=result.text)
 
 

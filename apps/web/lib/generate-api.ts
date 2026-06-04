@@ -51,8 +51,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const startGeneration = (input: string, ignoreProfile = false) =>
-  post<TurnResponse>("/generate/start", { input, ignore_profile: ignoreProfile });
+export const startGeneration = (input: string, ignoreProfile = false, modelTarget?: string) => {
+  const body: Record<string, unknown> = { input, ignore_profile: ignoreProfile };
+  if (modelTarget) body.model_target = modelTarget;
+  return post<TurnResponse>("/generate/start", body);
+};
 
 export const submitAnswer = (session_id: string, slot_id: string, answer: string) =>
   post<TurnResponse>("/generate/answer", { session_id, slot_id, answer });
