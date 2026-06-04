@@ -27,6 +27,9 @@ export default function Home() {
       <Link href="/generate" className="text-blue-600 hover:underline">
         Try prompt generation →
       </Link>
+      <Link href="/library" className="text-blue-600 hover:underline">
+        My prompts →
+      </Link>
       <input
         className="border rounded px-3 py-2 w-72"
         placeholder="email"

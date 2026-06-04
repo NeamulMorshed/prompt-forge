@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { GenerationResult } from "@/lib/generate-api";
 import { runPrompt, ratePrompt } from "@/lib/generate-api";
 
@@ -96,6 +97,12 @@ export function PromptOutput({ result }: Props) {
       {rated !== null && (
         <p className="text-sm text-gray-400">Thanks for the feedback &mdash; it helps improve PromptForge.</p>
       )}
+      <Link
+        href="/library"
+        className="text-xs text-gray-400 underline self-start"
+      >
+        View all my prompts →
+      </Link>
     </div>
   );
 }

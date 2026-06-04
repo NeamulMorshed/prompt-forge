@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { startGeneration, submitAnswer } from "@/lib/generate-api";
 import type { TurnResponse, GenerationResult, Question } from "@/lib/generate-api";
 import { DiscoveryChat } from "./components/DiscoveryChat";
@@ -20,15 +20,54 @@ type PageState =
     }
   | { phase: "error"; message: string };
 
+function readBranchTurn(): TurnResponse | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem("pf_branch_turn");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as TurnResponse;
+  } catch { return null; }
+}
+
+function initialPageState(branchTurn: TurnResponse | null): PageState {
+  if (!branchTurn) return { phase: "idle" };
+  if (branchTurn.status === "done" && branchTurn.result) {
+    return {
+      phase: "done",
+      result: branchTurn.result,
+      suggest_profile_save: branchTurn.suggest_profile_save,
+      extractable_slots: branchTurn.extractable_slots,
+      session_id: branchTurn.session_id,
+    };
+  }
+  if (branchTurn.status === "needs_question" && branchTurn.question) {
+    return {
+      phase: "asking",
+      session_id: branchTurn.session_id,
+      question: branchTurn.question,
+      question_count: 1,
+      profile_loaded: branchTurn.profile_loaded,
+    };
+  }
+  return { phase: "idle" };
+}
+
 export default function GeneratePage() {
-  const [input, setInput] = useState("");
-  const [pageState, setPageState] = useState<PageState>({ phase: "idle" });
+  const [input, setInput] = useState(() => {
+    const bt = readBranchTurn();
+    return bt ? "(branched)" : "";
+  });
+  const [pageState, setPageState] = useState<PageState>(() => initialPageState(readBranchTurn()));
   const [profileDismissed] = useState(
     () => typeof window !== "undefined" && localStorage.getItem("pf_profile_save_dismissed") === "1"
   );
   const [isAuthenticated] = useState(
     () => typeof window !== "undefined" && !!localStorage.getItem("pf_token")
   );
+
+  useEffect(() => {
+    sessionStorage.removeItem("pf_branch_turn");
+  }, []);
 
   function applyTurn(turn: TurnResponse, currentCount: number) {
     if (turn.status === "done" && turn.result) {
