@@ -8,7 +8,7 @@ from app.llm.router import LLMRouter
 from app.pipeline.assembler import ContextObject, assemble
 from app.pipeline.ccs import compute_ccs
 from app.pipeline.classifier import classify
-from app.pipeline.constructor import construct
+from app.pipeline.constructor import build_modules, construct
 from app.pipeline.crs_loader import load_crs, load_domain_defaults
 from app.pipeline.discovery import Question, apply_answer, next_question
 from app.pipeline.evaluator import ScoreResult, score
@@ -46,6 +46,7 @@ class Orchestrator:
         ignore_profile: bool = False,
         pre_filled_slots: dict[str, str] | None = None,
         branched_from_version_id: str | None = None,
+        model_target: str | None = None,
     ) -> TurnResult:
         classification = classify(initial_input, self._router)
         profile_snapshot: dict[str, str] = {}
@@ -60,6 +61,7 @@ class Orchestrator:
             profile_snapshot=profile_snapshot,
             pre_filled_slots=pre_filled_slots,
             branched_from_version_id=branched_from_version_id,
+            model_target=model_target or "gemini-2.0-flash",
         )
         return self._next_turn(session)
 
@@ -127,15 +129,17 @@ class Orchestrator:
             profile=session.profile_snapshot or None,
             domain_defaults=domain_defaults,
         )
-        prompt_text = construct(ctx, model="construct")
+        model_hint = session.model_target or "gemini-2.0-flash"
+        modules = build_modules(ctx, model=model_hint)
+        prompt_text = "\n\n".join(part for part in modules.values() if part.strip())
         score_result = score(prompt_text, ctx, self._router)
 
         if score_result.gate_failures:
             suggestions_note = "Improve: " + ", ".join(score_result.gate_failures)
-            prompt_text = construct(ctx, model="construct") + f"\n\n[Self-check: {suggestions_note}]"
+            prompt_text = prompt_text + f"\n\n[Self-check: {suggestions_note}]"
             score_result = score(prompt_text, ctx, self._router)
 
-        prompt_version_id = self._flush_to_db(session, ctx, prompt_text, score_result)
+        prompt_version_id = self._flush_to_db(session, ctx, prompt_text, score_result, modules)
         session.generated_prompt = prompt_text
         session.prompt_version_id = prompt_version_id
         session.status = "complete"
@@ -164,6 +168,7 @@ class Orchestrator:
         ctx: ContextObject,
         prompt_text: str,
         score_result: ScoreResult,
+        modules: dict[str, str] | None = None,
     ) -> str:
         if self._db is None:
             return str(uuid.uuid4())
@@ -213,6 +218,7 @@ class Orchestrator:
             session_id=db_session_id,
             user_id=db_user_id,
             domain=session.domain,
+            model_target=session.model_target,
             skills_applied=ctx.skills_applied,
             score=score_result.composite,
         )
@@ -228,6 +234,7 @@ class Orchestrator:
                 "dimensions": score_result.dimensions,
                 "suggestions": score_result.suggestions,
             },
+            modules_json=modules,
         )
         self._db.add(db_version)
         self._db.commit()

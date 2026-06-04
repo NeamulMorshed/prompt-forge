@@ -17,6 +17,9 @@ dependencies = [
     "redis>=8.0.0",
     "google-genai>=2.8.0",
     "apscheduler>=3.11.2",
+    "authlib>=1.7.2",
+    "qdrant-client>=1.18.0",
+    "markdownify>=1.2.2",
 ]
 
 [dependency-groups]

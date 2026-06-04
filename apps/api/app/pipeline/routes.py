@@ -10,9 +10,13 @@ from app.db.models import OutcomeRating, Prompt, PromptVersion, User
 from app.db.models import Session as SessionModel
 from app.llm.factory import build_router
 from app.pipeline.orchestrator import Orchestrator
+from app.audit.logger import log_event
+from app.pipeline.module_editor import edit_module
 from app.pipeline.schemas import (
     AnswerRequest,
     BranchRequest,
+    EditModuleRequest,
+    EditModuleResponse,
     GenerationResultOut,
     QuestionOut,
     RateRequest,
@@ -78,6 +82,7 @@ def start_generation(
         initial_input=body.input,
         user_id=user_id,
         ignore_profile=body.ignore_profile,
+        model_target=body.model_target,
     )
     return _turn_to_response(turn)
 
@@ -95,12 +100,18 @@ def submit_answer(
     return _turn_to_response(turn)
 
 
+_PAID_MODELS = {"gpt-4o", "claude-sonnet-4-6"}
+
+
 @router.post("/run", response_model=RunResponse)
 def run_prompt(body: RunRequest, db: Session = Depends(get_db)) -> RunResponse:
     version = db.get(PromptVersion, uuid.UUID(body.prompt_version_id))
     if version is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PromptVersion not found")
-    result = _llm_router.complete("construct", [{"role": "user", "content": version.content}])
+    prompt = db.get(Prompt, version.prompt_id)
+    model_target = (prompt.model_target if prompt else None) or "gemini-2.0-flash"
+    stage = "paid_construct" if model_target in _PAID_MODELS else "construct"
+    result = _llm_router.complete(stage, [{"role": "user", "content": version.content}])
     return RunResponse(output=result.text)
 
 
@@ -116,7 +127,39 @@ def rate_prompt(body: RateRequest, db: Session = Depends(get_db)) -> RateRespons
     )
     db.add(rating)
     db.commit()
+    log_event(db=db, action="prompt.rate", resource_type="prompt_version", resource_id=body.prompt_version_id, metadata={"rating": body.rating})
     return RateResponse(ok=True)
+
+
+@router.post("/edit-module", response_model=EditModuleResponse)
+def edit_prompt_module(
+    body: EditModuleRequest,
+    db: Session = Depends(get_db),
+) -> EditModuleResponse:
+    try:
+        version_id = uuid.UUID(body.prompt_version_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid version ID")
+    try:
+        new_version, score_result = edit_module(
+            version_id=version_id,
+            module_name=body.module_name,
+            new_text=body.new_text,
+            router=_llm_router,
+            db=db,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    return EditModuleResponse(
+        new_prompt_version_id=str(new_version.id),
+        score=ScoreOut(
+            composite=score_result.composite,
+            dimensions=score_result.dimensions,
+            suggestions=score_result.suggestions,
+            scored=score_result.scored,
+        ),
+        full_prompt=new_version.content,
+    )
 
 
 @router.post("/branch", response_model=TurnResponse)

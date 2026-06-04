@@ -50,3 +50,48 @@ def get_top_patterns(domain: str, limit: int = 5) -> list[Pattern]:
     """Retrieve top N patterns by quality score for a domain."""
     patterns = load_patterns(domain)
     return sorted(patterns, key=lambda p: p.quality_score, reverse=True)[:limit]
+
+
+import os
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.registry.qdrant_store import QdrantPatternStore
+
+_qdrant_store: "QdrantPatternStore | None" = None
+
+
+def _get_qdrant_store() -> "QdrantPatternStore | None":
+    global _qdrant_store
+    if _qdrant_store is None:
+        qdrant_url = os.getenv("QDRANT_URL", "")
+        if not qdrant_url:
+            return None
+        from app.registry.qdrant_store import build_store
+        _qdrant_store = build_store(url=qdrant_url)
+    return _qdrant_store
+
+
+def get_top_patterns_semantic(
+    domain: str,
+    context_text: str,
+    limit: int = 3,
+) -> list[Pattern]:
+    store = _get_qdrant_store()
+    if store is None:
+        return get_top_patterns(domain, limit=limit)
+
+    from app.ingestion.pipeline import embed_text
+    vector = embed_text(context_text)
+    hits = store.search(query_vector=vector, domain=domain, limit=limit)
+    return [
+        Pattern(
+            id=h.get("pattern_id", ""),
+            domain=domain,
+            structure=h["structure"],
+            abstraction=h["abstraction"],
+            quality_score=h.get("quality_score", 0.0),
+            sources=[],
+        )
+        for h in hits
+    ]

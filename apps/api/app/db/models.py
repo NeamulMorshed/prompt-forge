@@ -49,6 +49,15 @@ class Workspace(Base):
     governance_settings: Mapped[dict | None] = mapped_column(_Json, nullable=True)
 
 
+class WorkspaceMember(Base):
+    __tablename__ = "workspace_members"
+    id: Mapped[uuid.UUID] = _pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role: Mapped[str] = mapped_column(String, default="member")
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ContextProfile(Base):
     __tablename__ = "context_profiles"
     id: Mapped[uuid.UUID] = _pk()
@@ -57,6 +66,7 @@ class ContextProfile(Base):
     is_default: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     core_context: Mapped[dict] = mapped_column(_Json, default=dict, nullable=False)
     domain_overrides: Mapped[dict] = mapped_column(_Json, default=dict, nullable=False)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # updated_at: ORM-managed — fires on flush, not raw SQL UPDATE
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -94,6 +104,9 @@ class Prompt(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True
     )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True
+    )
     domain: Mapped[str | None] = mapped_column(String, nullable=True)
     model_target: Mapped[str | None] = mapped_column(String, nullable=True)
     skills_applied: Mapped[dict | None] = mapped_column(_Json, nullable=True)
@@ -114,6 +127,7 @@ class PromptVersion(Base):
     prompt_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("prompts.id", ondelete="CASCADE"))
     content: Mapped[str] = mapped_column(String)
     score_json: Mapped[dict | None] = mapped_column(_Json, nullable=True)
+    modules_json: Mapped[dict | None] = mapped_column(_Json, nullable=True)
     outcome_label: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -140,3 +154,25 @@ class Pattern(Base):
     source_url: Mapped[str | None] = mapped_column(String, nullable=True)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     outcome_rank: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id: Mapped[uuid.UUID] = _pk()
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    action: Mapped[str] = mapped_column(String)
+    resource_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    resource_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    extra_data: Mapped[dict | None] = mapped_column(_Json, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class OIDCConfig(Base):
+    __tablename__ = "oidc_configs"
+    id: Mapped[uuid.UUID] = _pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, unique=True)
+    discovery_url: Mapped[str] = mapped_column(String)
+    client_id: Mapped[str] = mapped_column(String)
+    client_secret: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

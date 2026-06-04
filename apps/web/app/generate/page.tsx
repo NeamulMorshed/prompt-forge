@@ -64,6 +64,8 @@ export default function GeneratePage() {
   const [isAuthenticated] = useState(
     () => typeof window !== "undefined" && !!localStorage.getItem("pf_token")
   );
+  const [modelTarget, setModelTarget] = useState<string>("gemini-2.0-flash");
+  const isPro = typeof window !== "undefined" && localStorage.getItem("pf_plan") === "pro";
 
   useEffect(() => {
     sessionStorage.removeItem("pf_branch_turn");
@@ -93,7 +95,7 @@ export default function GeneratePage() {
     if (!input.trim()) return;
     setPageState({ phase: "generating" });
     try {
-      const turn = await startGeneration(input.trim());
+      const turn = await startGeneration(input.trim(), false, isPro ? modelTarget : undefined);
       applyTurn(turn, 1);
     } catch (e) {
       setPageState({ phase: "error", message: e instanceof Error ? e.message : "Error" });
@@ -104,7 +106,7 @@ export default function GeneratePage() {
     if (!input.trim()) return;
     setPageState({ phase: "generating" });
     try {
-      const turn = await startGeneration(input.trim(), true); // ignore_profile=true
+      const turn = await startGeneration(input.trim(), true, isPro ? modelTarget : undefined);
       applyTurn(turn, 1);
     } catch (e) {
       setPageState({ phase: "error", message: e instanceof Error ? e.message : "Error" });
@@ -144,6 +146,20 @@ export default function GeneratePage() {
               if (e.key === "Enter" && e.metaKey) handleStart();
             }}
           />
+          {isPro && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+              <select
+                value={modelTarget}
+                onChange={(e) => setModelTarget(e.target.value)}
+                className="border rounded px-3 py-2 text-sm w-full max-w-xs"
+              >
+                <option value="gemini-2.0-flash">Gemini Flash (free)</option>
+                <option value="gpt-4o">GPT-4o (Pro)</option>
+                <option value="claude-sonnet-4-6">Claude Sonnet (Pro)</option>
+              </select>
+            </div>
+          )}
           <button
             className="bg-black text-white rounded-lg px-6 py-3 font-medium text-sm disabled:opacity-40 self-end"
             disabled={!input.trim()}

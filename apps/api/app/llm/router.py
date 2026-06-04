@@ -7,18 +7,20 @@ from app.llm.types import CompletionResult
 logger = logging.getLogger("app.llm.router")
 
 ROUTING = {
-    "classify":       "groq/llama-3.1-8b-instant",
-    "phrase_q":       "groq/llama-3.1-8b-instant",
-    "construct":      "gemini/gemini-2.0-flash",
-    "evaluate":       "gemini/gemini-2.0-flash",
-    "paid_construct": "anthropic/claude-sonnet-4-6",
-    "paid_evaluate":  "anthropic/claude-sonnet-4-6",
+    "classify":        "groq/llama-3.1-8b-instant",
+    "phrase_q":        "groq/llama-3.1-8b-instant",
+    "construct":       "gemini/gemini-2.0-flash",
+    "evaluate":        "gemini/gemini-2.0-flash",
+    "paid_construct":  "anthropic/claude-sonnet-4-6",
+    "paid_evaluate":   "anthropic/claude-sonnet-4-6",
+    "gpt4o_construct": "openai/gpt-4o",
 }
 
 _COST_PER_1K_TOKENS: dict[str, float] = {
     "groq":      0.0,
     "gemini":    0.0,
     "anthropic": 0.003,
+    "openai":    0.005,
     "ollama":    0.0,
     "mock":      0.0,
 }
