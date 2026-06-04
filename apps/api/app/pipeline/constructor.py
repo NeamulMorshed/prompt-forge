@@ -3,7 +3,7 @@ from app.pipeline.assembler import ContextObject
 _DOMAIN_ROLES = {
     "marketing_content": "direct-response marketing and content strategy",
     "writing_academic": "academic research and scholarly writing",
-    "general": "versatile expert assistant",
+    "general": "versatile assistant",
 }
 
 _REASONING_MODELS = {"70b", "claude", "gpt-4", "gemini-pro", "gemini-2.5"}
@@ -20,6 +20,7 @@ def construct(ctx: ContextObject, model: str) -> str:
         ("context", _context_module(get)),
         ("task", _task_module(get)),
         ("format", _format_module(get)),
+        ("patterns", _patterns_module(ctx.domain)),
         ("examples", _examples_module(get)),
         ("reasoning", _reasoning_module(model)),
         ("guardrails", _guardrails_module(get)),
@@ -108,6 +109,17 @@ def _reasoning_module(model: str) -> str:
             "(angle, structure, tone calibration). Then write the output."
         )
     return ""
+
+
+def _patterns_module(domain: str) -> str:
+    from app.registry.loader import get_top_patterns
+    patterns = get_top_patterns(domain, limit=3)
+    if not patterns:
+        return ""
+    lines = ["Proven structural patterns for this domain:"]
+    for p in patterns:
+        lines.append(f"- {p.structure}: {p.abstraction}")
+    return "\n".join(lines)
 
 
 def _guardrails_module(get) -> str:

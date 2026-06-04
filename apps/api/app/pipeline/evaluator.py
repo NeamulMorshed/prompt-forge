@@ -29,6 +29,7 @@ _JUDGE_SYSTEM = (
 @dataclass
 class ScoreResult:
     composite: float
+    scored: bool = True
     dimensions: dict[str, float] = field(default_factory=dict)
     gate_failures: list[str] = field(default_factory=list)
     suggestions: list[str] = field(default_factory=list)
@@ -46,7 +47,7 @@ def score(prompt: str, ctx: ContextObject, router: LLMRouter) -> ScoreResult:
     try:
         data = json.loads(result.text)
     except json.JSONDecodeError:
-        return ScoreResult(composite=50.0, suggestions=["Could not evaluate prompt automatically."])
+        return ScoreResult(composite=50.0, scored=False, suggestions=["Score unavailable — LLM evaluator not configured."])
 
     composite = 0.0
     gate_failures: list[str] = []

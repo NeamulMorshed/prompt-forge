@@ -11,6 +11,7 @@ export interface ScoreOut {
   composite: number;
   dimensions: Record<string, number>;
   suggestions: string[];
+  scored: boolean;
 }
 
 export interface GenerationResult {

@@ -51,6 +51,7 @@ def _turn_to_response(turn) -> TurnResponse:
                 composite=turn.result.score.composite,
                 dimensions=turn.result.score.dimensions,
                 suggestions=turn.result.score.suggestions,
+                scored=turn.result.score.scored,
             ),
             prompt_version_id=turn.result.prompt_version_id,
         )
