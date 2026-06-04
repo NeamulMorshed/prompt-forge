@@ -16,13 +16,14 @@ def build_modules(ctx: ContextObject, model: str) -> dict[str, str]:
         v = ctx.slots.get(slot_id)
         return v.value if v else default
 
+    intent_text = ctx.intent or ""
     raw_parts = [
         ("role",       _role_module(ctx.domain)),
         ("objective",  _objective_module(get)),
         ("context",    _context_module(get)),
         ("task",       _task_module(get)),
         ("format",     _format_module(get)),
-        ("patterns",   _patterns_module(ctx.domain)),
+        ("patterns",   _patterns_module(ctx.domain, context_text=intent_text)),
         ("examples",   _examples_module(get)),
         ("reasoning",  _reasoning_module(model)),
         ("guardrails", _guardrails_module(get)),
@@ -134,9 +135,12 @@ def _reasoning_module(model: str) -> str:
     return ""
 
 
-def _patterns_module(domain: str) -> str:
-    from app.registry.loader import get_top_patterns
-    patterns = get_top_patterns(domain, limit=3)
+def _patterns_module(domain: str, context_text: str = "") -> str:
+    from app.registry.loader import get_top_patterns, get_top_patterns_semantic
+    if context_text:
+        patterns = get_top_patterns_semantic(domain, context_text=context_text, limit=3)
+    else:
+        patterns = get_top_patterns(domain, limit=3)
     if not patterns:
         return ""
     lines = ["Proven structural patterns for this domain:"]
