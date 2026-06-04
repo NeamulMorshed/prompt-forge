@@ -9,6 +9,7 @@ from app.learning.scheduler import start_scheduler
 from app.library.routes import router as library_router
 from app.pipeline.routes import router as generate_router
 from app.profile.routes import router as profile_router
+from app.workspace.routes import router as workspace_router
 
 _scheduler = None
 
@@ -33,6 +34,7 @@ app.include_router(auth_router)
 app.include_router(generate_router)
 app.include_router(profile_router)
 app.include_router(library_router)
+app.include_router(workspace_router)
 
 
 @app.get("/health")

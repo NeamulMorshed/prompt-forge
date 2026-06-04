@@ -49,6 +49,15 @@ class Workspace(Base):
     governance_settings: Mapped[dict | None] = mapped_column(_Json, nullable=True)
 
 
+class WorkspaceMember(Base):
+    __tablename__ = "workspace_members"
+    id: Mapped[uuid.UUID] = _pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    role: Mapped[str] = mapped_column(String, default="member")
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ContextProfile(Base):
     __tablename__ = "context_profiles"
     id: Mapped[uuid.UUID] = _pk()
@@ -57,6 +66,7 @@ class ContextProfile(Base):
     is_default: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     core_context: Mapped[dict] = mapped_column(_Json, default=dict, nullable=False)
     domain_overrides: Mapped[dict] = mapped_column(_Json, default=dict, nullable=False)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # updated_at: ORM-managed — fires on flush, not raw SQL UPDATE
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -93,6 +103,9 @@ class Prompt(Base):
     )
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True
+    )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True
     )
     domain: Mapped[str | None] = mapped_column(String, nullable=True)
     model_target: Mapped[str | None] = mapped_column(String, nullable=True)

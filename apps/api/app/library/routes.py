@@ -30,10 +30,14 @@ def _assert_owns(prompt: Prompt | None, user: User) -> Prompt:
 @router.get("", response_model=list[PromptGroupOut])
 def list_library(
     domain: str | None = None,
+    scope: str = "personal",
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[PromptGroupOut]:
-    stmt = select(Prompt).where(Prompt.user_id == user.id)
+    if scope == "workspace" and user.workspace_id:
+        stmt = select(Prompt).where(Prompt.workspace_id == user.workspace_id)
+    else:
+        stmt = select(Prompt).where(Prompt.user_id == user.id)
     if domain:
         stmt = stmt.where(Prompt.domain == domain)
     stmt = stmt.order_by(Prompt.created_at.desc())
