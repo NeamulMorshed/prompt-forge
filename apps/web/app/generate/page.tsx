@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { startGeneration, submitAnswer } from "@/lib/generate-api";
 import type { TurnResponse, GenerationResult, Question } from "@/lib/generate-api";
 import { DiscoveryChat } from "./components/DiscoveryChat";
@@ -23,13 +23,12 @@ type PageState =
 export default function GeneratePage() {
   const [input, setInput] = useState("");
   const [pageState, setPageState] = useState<PageState>({ phase: "idle" });
-  const [profileDismissed, setProfileDismissed] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    setProfileDismissed(localStorage.getItem("pf_profile_save_dismissed") === "1");
-    setIsAuthenticated(!!localStorage.getItem("pf_token"));
-  }, []);
+  const [profileDismissed] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("pf_profile_save_dismissed") === "1"
+  );
+  const [isAuthenticated] = useState(
+    () => typeof window !== "undefined" && !!localStorage.getItem("pf_token")
+  );
 
   function applyTurn(turn: TurnResponse, currentCount: number) {
     if (turn.status === "done" && turn.result) {

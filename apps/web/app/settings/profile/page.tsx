@@ -25,10 +25,10 @@ const DOMAIN_SLOTS: Record<string, { id: string; label: string }[]> = {
 type CoreFields = { tone: string; audience: string; brand_name: string; constraints: string };
 
 export default function ProfileSettingsPage() {
-  const [loading, setLoading] = useState(true);
+  const [noToken] = useState(() => typeof window !== "undefined" && !localStorage.getItem("pf_token"));
+  const [loading, setLoading] = useState(() => typeof window === "undefined" || !!localStorage.getItem("pf_token"));
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [noToken, setNoToken] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -36,12 +36,7 @@ export default function ProfileSettingsPage() {
   const [domainSlots, setDomainSlots] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
-    const token = localStorage.getItem("pf_token");
-    if (!token) {
-      setNoToken(true);
-      setLoading(false);
-      return;
-    }
+    if (noToken) return;
     getProfile()
       .then((profile) => {
         if (profile) {
@@ -62,7 +57,7 @@ export default function ProfileSettingsPage() {
         setLoadError(true);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [noToken]);
 
   useEffect(() => {
     return () => {
