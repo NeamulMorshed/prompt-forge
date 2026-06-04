@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
 from app.db import models  # noqa: F401
-from app.db.models import Prompt, PromptVersion, User
+from app.db.models import Prompt, User
 
 
 @pytest.fixture()
