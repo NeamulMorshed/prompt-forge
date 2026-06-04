@@ -24,12 +24,23 @@ export interface TurnResponse {
   status: "needs_question" | "done";
   question: Question | null;
   result: GenerationResult | null;
+  suggest_profile_save: boolean;
+  extractable_slots: Record<string, string>;
+  profile_loaded: boolean;
+}
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("pf_token");
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -39,8 +50,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const startGeneration = (input: string) =>
-  post<TurnResponse>("/generate/start", { input });
+export const startGeneration = (input: string, ignoreProfile = false) =>
+  post<TurnResponse>("/generate/start", { input, ignore_profile: ignoreProfile });
 
 export const submitAnswer = (session_id: string, slot_id: string, answer: string) =>
   post<TurnResponse>("/generate/answer", { session_id, slot_id, answer });
