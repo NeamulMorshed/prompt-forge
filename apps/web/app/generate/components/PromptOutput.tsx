@@ -42,17 +42,19 @@ export function PromptOutput({ result }: Props) {
 
   return (
     <div className="w-full max-w-2xl flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <div className="h-2 flex-1 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-green-500 rounded-full transition-all"
-            style={{ width: `${score.composite}%` }}
-          />
+      {score.scored ? (
+        <div className="flex items-center gap-3">
+          <div className="h-2 flex-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 rounded-full transition-all"
+              style={{ width: `${score.composite}%` }}
+            />
+          </div>
+          <span className="text-sm font-semibold text-gray-700">
+            {Math.round(score.composite)}/100
+          </span>
         </div>
-        <span className="text-sm font-semibold text-gray-700">
-          {Math.round(score.composite)}/100
-        </span>
-      </div>
+      ) : null}
 
       {score.suggestions.length > 0 && (
         <ul className="text-sm text-gray-500 list-disc pl-5 space-y-1">

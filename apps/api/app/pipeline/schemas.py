@@ -1,8 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class StartRequest(BaseModel):
-    input: str
+    input: str = Field(..., min_length=1, max_length=2000)
     ignore_profile: bool = False
 
 
@@ -23,6 +23,7 @@ class ScoreOut(BaseModel):
     composite: float
     dimensions: dict[str, float]
     suggestions: list[str]
+    scored: bool = True
 
 
 class GenerationResultOut(BaseModel):
