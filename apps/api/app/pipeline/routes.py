@@ -3,9 +3,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.auth.deps import get_optional_user
 from app.config import settings
 from app.db.base import get_db
-from app.db.models import OutcomeRating, PromptVersion
+from app.db.models import OutcomeRating, PromptVersion, User
 from app.llm.factory import build_router
 from app.pipeline.orchestrator import Orchestrator
 from app.pipeline.schemas import (
@@ -56,18 +57,33 @@ def _turn_to_response(turn) -> TurnResponse:
         status=turn.status,
         question=question_out,
         result=result_out,
+        suggest_profile_save=turn.suggest_profile_save,
+        extractable_slots=turn.extractable_slots,
+        profile_loaded=turn.profile_loaded,
     )
 
 
 @router.post("/start", response_model=TurnResponse)
-def start_generation(body: StartRequest, db: Session = Depends(get_db)) -> TurnResponse:
+def start_generation(
+    body: StartRequest,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user),
+) -> TurnResponse:
     orch = Orchestrator(router=_llm_router, store=_session_store, db=db)
-    turn = orch.start(initial_input=body.input, user_id=None)
+    user_id = str(current_user.id) if current_user else None
+    turn = orch.start(
+        initial_input=body.input,
+        user_id=user_id,
+        ignore_profile=body.ignore_profile,
+    )
     return _turn_to_response(turn)
 
 
 @router.post("/answer", response_model=TurnResponse)
-def submit_answer(body: AnswerRequest, db: Session = Depends(get_db)) -> TurnResponse:
+def submit_answer(
+    body: AnswerRequest,
+    db: Session = Depends(get_db),
+) -> TurnResponse:
     orch = Orchestrator(router=_llm_router, store=_session_store, db=db)
     try:
         turn = orch.answer(session_id=body.session_id, slot_id=body.slot_id, answer=body.answer)
@@ -80,7 +96,7 @@ def submit_answer(body: AnswerRequest, db: Session = Depends(get_db)) -> TurnRes
 def run_prompt(body: RunRequest, db: Session = Depends(get_db)) -> RunResponse:
     version = db.get(PromptVersion, uuid.UUID(body.prompt_version_id))
     if version is None:
-        raise HTTPException(status_code=404, detail="PromptVersion not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PromptVersion not found")
     result = _llm_router.complete("construct", [{"role": "user", "content": version.content}])
     return RunResponse(output=result.text)
 
@@ -89,7 +105,7 @@ def run_prompt(body: RunRequest, db: Session = Depends(get_db)) -> RunResponse:
 def rate_prompt(body: RateRequest, db: Session = Depends(get_db)) -> RateResponse:
     version = db.get(PromptVersion, uuid.UUID(body.prompt_version_id))
     if version is None:
-        raise HTTPException(status_code=404, detail="PromptVersion not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="PromptVersion not found")
     rating = OutcomeRating(
         prompt_version_id=uuid.UUID(body.prompt_version_id),
         rating=body.rating,
