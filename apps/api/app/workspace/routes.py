@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.audit.logger import log_event
 from app.auth.deps import get_current_user
 from app.db.base import get_db
 from app.db.models import User, Workspace, WorkspaceMember
@@ -49,6 +50,7 @@ def create_workspace(
     current_user.workspace_id = ws.id
     db.commit()
     db.refresh(ws)
+    log_event(db=db, action="workspace.create", user_id=current_user.id, workspace_id=ws.id, resource_type="workspace", resource_id=str(ws.id))
     return WorkspaceOut.model_validate(ws)
 
 
@@ -120,6 +122,7 @@ def invite_member(
     db.add(member)
     invited_user.workspace_id = ws.id
     db.commit()
+    log_event(db=db, action="workspace.invite", user_id=current_user.id, workspace_id=ws.id, resource_type="user", resource_id=body.email, metadata={"role": body.role})
     return {"ok": True}
 
 
@@ -150,5 +153,7 @@ def leave_workspace(
     )
     if member:
         db.delete(member)
+    ws_id_for_log = ws.id
     current_user.workspace_id = None
     db.commit()
+    log_event(db=db, action="workspace.leave", user_id=current_user.id, workspace_id=ws_id_for_log)

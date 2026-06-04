@@ -10,6 +10,7 @@ from app.db.models import OutcomeRating, Prompt, PromptVersion, User
 from app.db.models import Session as SessionModel
 from app.llm.factory import build_router
 from app.pipeline.orchestrator import Orchestrator
+from app.audit.logger import log_event
 from app.pipeline.module_editor import edit_module
 from app.pipeline.schemas import (
     AnswerRequest,
@@ -126,6 +127,7 @@ def rate_prompt(body: RateRequest, db: Session = Depends(get_db)) -> RateRespons
     )
     db.add(rating)
     db.commit()
+    log_event(db=db, action="prompt.rate", resource_type="prompt_version", resource_id=body.prompt_version_id, metadata={"rating": body.rating})
     return RateResponse(ok=True)
 
 
