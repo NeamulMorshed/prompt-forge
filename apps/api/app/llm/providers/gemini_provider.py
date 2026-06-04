@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 from app.llm.providers.base import Provider
 from app.llm.types import CompletionResult
@@ -6,23 +7,35 @@ from app.llm.types import CompletionResult
 
 class GeminiProvider(Provider):
     def __init__(self, api_key: str, model_name: str = "gemini-2.0-flash"):
-        genai.configure(api_key=api_key)
-        self._model = genai.GenerativeModel(model_name)
+        self._client = genai.Client(api_key=api_key)
+        self._model_name = model_name
 
     def complete(self, model: str, messages: list[dict]) -> CompletionResult:
-        parts = []
+        system_parts: list[str] = []
+        content_parts: list[str] = []
+
         for m in messages:
             role = m.get("role", "user")
             content = m.get("content", "")
             if role == "system":
-                parts.append(f"[System instructions]: {content}")
+                system_parts.append(content)
             elif role == "assistant":
-                parts.append(f"[Assistant]: {content}")
+                content_parts.append(f"[Assistant]: {content}")
             else:
-                parts.append(content)
-        combined = "\n\n".join(parts)
+                content_parts.append(content)
 
-        response = self._model.generate_content(combined)
+        combined = "\n\n".join(content_parts)
+        config = None
+        if system_parts:
+            config = types.GenerateContentConfig(
+                system_instruction="\n\n".join(system_parts)
+            )
+
+        response = self._client.models.generate_content(
+            model=self._model_name,
+            contents=combined,
+            config=config,
+        )
         text = response.text
 
         try:
