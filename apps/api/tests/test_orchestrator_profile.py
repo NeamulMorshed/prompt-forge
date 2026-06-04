@@ -37,6 +37,7 @@ def store():
 
 
 def test_load_profile_returns_merged_dict(store):
+    valid_user_id = str(uuid.uuid4())
     mock_profile = MagicMock()
     mock_profile.core_context = {"tone": "bold", "audience": "founders"}
     mock_profile.domain_overrides = {"marketing_content": {"channel": "LinkedIn"}}
@@ -44,12 +45,13 @@ def test_load_profile_returns_merged_dict(store):
     mock_db.scalar.return_value = mock_profile
 
     orch = Orchestrator(router=_router(), store=store, db=mock_db)
-    result = orch._load_profile("user-123", "marketing_content")
+    result = orch._load_profile(valid_user_id, "marketing_content")
 
     assert result == {"tone": "bold", "audience": "founders", "channel": "LinkedIn"}
 
 
 def test_load_profile_domain_override_wins_over_core(store):
+    valid_user_id = str(uuid.uuid4())
     mock_profile = MagicMock()
     mock_profile.core_context = {"tone": "formal"}
     mock_profile.domain_overrides = {"marketing_content": {"tone": "edgy"}}
@@ -57,15 +59,16 @@ def test_load_profile_domain_override_wins_over_core(store):
     mock_db.scalar.return_value = mock_profile
 
     orch = Orchestrator(router=_router(), store=store, db=mock_db)
-    result = orch._load_profile("user-123", "marketing_content")
+    result = orch._load_profile(valid_user_id, "marketing_content")
     assert result["tone"] == "edgy"
 
 
 def test_load_profile_returns_empty_when_no_profile(store):
+    valid_user_id = str(uuid.uuid4())
     mock_db = MagicMock()
     mock_db.scalar.return_value = None
     orch = Orchestrator(router=_router(), store=store, db=mock_db)
-    assert orch._load_profile("user-123", "marketing_content") == {}
+    assert orch._load_profile(valid_user_id, "marketing_content") == {}
 
 
 def test_load_profile_returns_empty_when_db_none(store):
@@ -81,7 +84,7 @@ def test_profile_snapshot_stored_on_session(store):
     mock_db.scalar.return_value = mock_profile
 
     orch = Orchestrator(router=_router(), store=store, db=mock_db)
-    result = orch.start(initial_input="write a post", user_id="some-user-id")
+    result = orch.start(initial_input="write a post", user_id=str(uuid.uuid4()))
     session = store.get(result.session_id)
     assert session.profile_snapshot == {"tone": "casual"}
 
@@ -89,7 +92,7 @@ def test_profile_snapshot_stored_on_session(store):
 def test_ignore_profile_skips_load(store):
     mock_db = MagicMock()
     orch = Orchestrator(router=_router(), store=store, db=mock_db)
-    result = orch.start(initial_input="write a post", user_id="user-123", ignore_profile=True)
+    result = orch.start(initial_input="write a post", user_id=str(uuid.uuid4()), ignore_profile=True)
     session = store.get(result.session_id)
     assert session.profile_snapshot == {}
     mock_db.scalar.assert_not_called()

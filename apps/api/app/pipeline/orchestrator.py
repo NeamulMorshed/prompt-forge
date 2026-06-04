@@ -72,7 +72,7 @@ class Orchestrator:
         try:
             user_uuid = uuid.UUID(user_id)
         except ValueError:
-            user_uuid = user_id  # type: ignore[assignment]
+            return {}
         profile = self._db.scalar(
             select(ContextProfile).where(
                 ContextProfile.user_id == user_uuid,
