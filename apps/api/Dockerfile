@@ -13,8 +13,9 @@ COPY apps/api/app ./app
 COPY apps/api/migrations ./migrations
 COPY apps/api/alembic.ini ./alembic.ini
 
-# crs_loader.py resolves 5 parents up to /; schemas live at /packages/schemas
+# crs_loader.py resolves 5 parents up to /; schemas + patterns live at /packages/
 COPY packages/schemas /packages/schemas
+COPY packages/patterns /packages/patterns
 
 COPY apps/api/start.sh ./start.sh
 RUN chmod +x ./start.sh
