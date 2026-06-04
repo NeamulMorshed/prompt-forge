@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   listLibrary,
@@ -19,10 +20,10 @@ const DOMAIN_OPTIONS = [
 
 export default function LibraryPage() {
   const router = useRouter();
-  const [noToken, setNoToken] = useState(() =>
+  const [noToken] = useState(() =>
     typeof window !== "undefined" ? !localStorage.getItem("pf_token") : false
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!noToken);
   const [error, setError] = useState<string | null>(null);
   const [domain, setDomain] = useState("");
   const [groups, setGroups] = useState<PromptGroupOut[]>([]);
@@ -33,29 +34,26 @@ export default function LibraryPage() {
   const [editLabel, setEditLabel] = useState<{ promptId: string; versionId: string; value: string } | null>(null);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
+  const fetchGroups = useCallback(() => {
+    listLibrary(domain || undefined)
+      .then((data) => { setGroups(data); setError(null); })
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+      .finally(() => setLoading(false));
+  }, [domain]);
+
   useEffect(() => {
-    if (noToken) { setLoading(false); return; }
+    if (noToken) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    setError(null);
     fetchGroups();
-  }, [domain, noToken]);
+  }, [noToken, fetchGroups]);
 
   useEffect(() => {
     if (editLabel && labelInputRef.current) {
       labelInputRef.current.focus();
     }
   }, [editLabel]);
-
-  async function fetchGroups() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await listLibrary(domain || undefined);
-      setGroups(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleExpand(rootPromptId: string) {
     if (expanded === rootPromptId) {
@@ -130,7 +128,7 @@ export default function LibraryPage() {
     return (
       <main className="min-h-screen flex items-center justify-center p-8">
         <p className="text-gray-500 text-sm">
-          <a href="/" className="text-blue-600 underline">Log in</a> to view your prompt library.
+          <Link href="/" className="text-blue-600 underline">Log in</Link> to view your prompt library.
         </p>
       </main>
     );
