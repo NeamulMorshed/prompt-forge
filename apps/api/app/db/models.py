@@ -111,7 +111,7 @@ class Prompt(Base):
 class PromptVersion(Base):
     __tablename__ = "prompt_versions"
     id: Mapped[uuid.UUID] = _pk()
-    prompt_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("prompts.id"))
+    prompt_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("prompts.id", ondelete="CASCADE"))
     content: Mapped[str] = mapped_column(String)
     score_json: Mapped[dict | None] = mapped_column(_Json, nullable=True)
     outcome_label: Mapped[str | None] = mapped_column(String, nullable=True)

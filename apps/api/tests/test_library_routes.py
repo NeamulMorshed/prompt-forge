@@ -1,9 +1,8 @@
 import uuid
-import pytest
 from fastapi.testclient import TestClient
 
 from app.db.base import get_db
-from app.db.models import Prompt, PromptVersion, User
+from app.db.models import Prompt, PromptVersion
 
 
 def _signup(client: TestClient, email: str) -> str:
@@ -184,3 +183,36 @@ def test_delete_prompt(client):
 
     resp2 = client.get("/library", headers=headers)
     assert resp2.json() == []
+
+
+def test_patch_title_returns_404_for_other_user(client):
+    token_a = _signup(client, "lib9a@test.com")
+    token_b = _signup(client, "lib9b@test.com")
+    r = client.get("/auth/me", headers={"Authorization": f"Bearer {token_a}"})
+    user_a_id = uuid.UUID(r.json()["id"])
+
+    db = _get_db(client)
+    p, _ = _make_prompt(db, user_a_id)
+
+    resp = client.patch(
+        f"/library/{p.id}",
+        json={"title": "Hacked"},
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code == 404
+
+
+def test_delete_returns_404_for_other_user(client):
+    token_a = _signup(client, "lib10a@test.com")
+    token_b = _signup(client, "lib10b@test.com")
+    r = client.get("/auth/me", headers={"Authorization": f"Bearer {token_a}"})
+    user_a_id = uuid.UUID(r.json()["id"])
+
+    db = _get_db(client)
+    p, _ = _make_prompt(db, user_a_id)
+
+    resp = client.delete(
+        f"/library/{p.id}",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert resp.status_code == 404

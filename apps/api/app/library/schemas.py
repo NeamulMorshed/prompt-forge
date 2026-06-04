@@ -52,3 +52,7 @@ class PatchTitleRequest(BaseModel):
 
 class PatchLabelRequest(BaseModel):
     outcome_label: str | None = None
+
+
+class OkResponse(BaseModel):
+    ok: bool

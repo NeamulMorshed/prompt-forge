@@ -8,6 +8,7 @@ from app.auth.deps import get_current_user
 from app.db.base import get_db
 from app.db.models import Prompt, PromptVersion, User
 from app.library.schemas import (
+    OkResponse,
     PatchLabelRequest,
     PatchTitleRequest,
     PromptDetailOut,
@@ -91,14 +92,20 @@ def get_prompt_group(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     prompt = _assert_owns(db.get(Prompt, pid), user)
 
-    group_id = prompt.group_id if prompt.group_id else prompt.id
-    group_prompts = list(
-        db.scalars(
-            select(Prompt)
-            .where(Prompt.group_id == group_id, Prompt.user_id == user.id)
-            .order_by(Prompt.created_at.asc())
-        ).all()
-    )
+    # Return all prompts in the same group
+    if prompt.group_id:
+        group_prompts = list(
+            db.scalars(
+                select(Prompt)
+                .where(Prompt.group_id == prompt.group_id, Prompt.user_id == user.id)
+                .order_by(Prompt.created_at.asc())
+            ).all()
+        )
+        group_id_for_response = str(prompt.group_id)
+    else:
+        # Prompt has no group_id (pre-migration row) — treat as singleton group
+        group_prompts = [prompt]
+        group_id_for_response = str(prompt.id)
 
     prompt_details: list[PromptDetailOut] = []
     for p in group_prompts:
@@ -112,7 +119,7 @@ def get_prompt_group(
         prompt_details.append(
             PromptDetailOut(
                 id=str(p.id),
-                group_id=str(group_id),
+                group_id=group_id_for_response,
                 title=p.title,
                 domain=p.domain,
                 skills_applied=p.skills_applied,
@@ -132,16 +139,16 @@ def get_prompt_group(
             )
         )
 
-    return PromptGroupDetailOut(group_id=str(group_id), prompts=prompt_details)
+    return PromptGroupDetailOut(group_id=group_id_for_response, prompts=prompt_details)
 
 
-@router.patch("/{prompt_id}", response_model=dict)
+@router.patch("/{prompt_id}", response_model=OkResponse)
 def patch_prompt_title(
     prompt_id: str,
     body: PatchTitleRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> dict:
+) -> OkResponse:
     try:
         pid = uuid.UUID(prompt_id)
     except ValueError:
@@ -149,17 +156,17 @@ def patch_prompt_title(
     prompt = _assert_owns(db.get(Prompt, pid), user)
     prompt.title = body.title
     db.commit()
-    return {"ok": True}
+    return OkResponse(ok=True)
 
 
-@router.patch("/{prompt_id}/versions/{version_id}", response_model=dict)
+@router.patch("/{prompt_id}/versions/{version_id}", response_model=OkResponse)
 def patch_version_label(
     prompt_id: str,
     version_id: str,
     body: PatchLabelRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> dict:
+) -> OkResponse:
     try:
         pid = uuid.UUID(prompt_id)
         vid = uuid.UUID(version_id)
@@ -171,15 +178,15 @@ def patch_version_label(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
     version.outcome_label = body.outcome_label
     db.commit()
-    return {"ok": True}
+    return OkResponse(ok=True)
 
 
-@router.delete("/{prompt_id}", response_model=dict)
+@router.delete("/{prompt_id}", response_model=OkResponse)
 def delete_prompt(
     prompt_id: str,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> dict:
+) -> OkResponse:
     try:
         pid = uuid.UUID(prompt_id)
     except ValueError:
@@ -189,4 +196,4 @@ def delete_prompt(
         db.delete(v)
     db.delete(prompt)
     db.commit()
-    return {"ok": True}
+    return OkResponse(ok=True)
