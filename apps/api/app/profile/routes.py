@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -70,7 +70,7 @@ def upsert_profile(
     return profile
 
 
-@router.delete("", response_model=dict)
+@router.delete("", response_model=dict[str, bool])
 def delete_profile(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -91,8 +91,10 @@ def extract_profile(
     try:
         session_id = uuid.UUID(body.session_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     db_session = db.get(SessionModel, session_id)
     if db_session is None or db_session.status != "complete":
-        raise HTTPException(status_code=404, detail="Session not found or not complete")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or not complete")
+    if db_session.user_id is not None and db_session.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found or not complete")
     return _split_slots(db_session.filled_slots or {}, db_session.domain or "general")

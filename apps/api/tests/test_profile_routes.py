@@ -1,8 +1,7 @@
-import pytest
+import uuid
 from fastapi.testclient import TestClient
 
-from app.auth.security import create_access_token
-from app.db.models import ContextProfile, Session as SessionModel, User
+from app.db.models import Session as SessionModel
 from app.db.base import get_db
 
 
@@ -81,7 +80,6 @@ def test_extract_requires_auth(client):
 
 def test_extract_returns_404_for_missing_session(client):
     _, token = _make_token(client)
-    import uuid
     resp = client.post(
         "/profile/extract",
         json={"session_id": str(uuid.uuid4())},
@@ -96,7 +94,6 @@ def test_extract_splits_core_vs_domain(client):
     # Inject a completed session directly into the DB
     db_gen = client.app.dependency_overrides[get_db]()
     db = next(db_gen)
-    import uuid
     session_id = uuid.uuid4()
     db.add(SessionModel(
         id=session_id,
@@ -121,3 +118,40 @@ def test_extract_splits_core_vs_domain(client):
     assert "channel" in data["domain_overrides"].get("marketing_content", {})
     assert "goal" in data["domain_overrides"].get("marketing_content", {})
     assert "channel" not in data["core_context"]
+
+
+def test_extract_rejects_other_users_session(client):
+    """User A cannot extract slots from User B's session."""
+    # User A
+    r = client.post("/auth/signup", json={"email": "usera@test.com", "password": "pw123456"})
+    token_a = r.json()["access_token"]
+
+    # User B
+    r3 = client.post("/auth/signup", json={"email": "userb@test.com", "password": "pw123456"})
+    token_b = r3.json()["access_token"]
+    r4 = client.get("/auth/me", headers={"Authorization": f"Bearer {token_b}"})
+    user_b_id = uuid.UUID(r4.json()["id"])
+
+    # Create a completed session belonging to User B
+    db_gen = client.app.dependency_overrides[get_db]()
+    db = next(db_gen)
+    session_id = uuid.uuid4()
+    db.add(SessionModel(
+        id=session_id,
+        user_id=user_b_id,
+        domain="marketing_content",
+        initial_input="x",
+        filled_slots={"tone": "bold", "goal": "get leads"},
+        questions_asked=1,
+        ccs=0.8,
+        status="complete",
+    ))
+    db.commit()
+
+    # User A tries to extract — should get 404
+    resp = client.post(
+        "/profile/extract",
+        json={"session_id": str(session_id)},
+        headers={"Authorization": f"Bearer {token_a}"},
+    )
+    assert resp.status_code == 404
