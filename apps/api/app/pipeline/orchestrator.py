@@ -1,6 +1,7 @@
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session as DBSession
 
 from app.llm.router import LLMRouter
@@ -27,6 +28,9 @@ class TurnResult:
     status: str  # "needs_question" | "done"
     question: Question | None
     result: GenerationResult | None
+    suggest_profile_save: bool = False
+    extractable_slots: dict[str, str] = field(default_factory=dict)
+    profile_loaded: bool = False
 
 
 class Orchestrator:
@@ -35,14 +39,18 @@ class Orchestrator:
         self._store = store
         self._db = db
 
-    def start(self, initial_input: str, user_id: str | None) -> TurnResult:
+    def start(self, initial_input: str, user_id: str | None, ignore_profile: bool = False) -> TurnResult:
         classification = classify(initial_input, self._router)
+        profile_snapshot: dict[str, str] = {}
+        if user_id and not ignore_profile:
+            profile_snapshot = self._load_profile(user_id, classification.domain)
         session = self._store.create(
             domain=classification.domain,
             initial_input=initial_input,
             intent=classification.intent,
             clarity=classification.clarity,
             user_id=user_id,
+            profile_snapshot=profile_snapshot,
         )
         return self._next_turn(session)
 
@@ -56,6 +64,26 @@ class Orchestrator:
         session.ccs = compute_ccs(slots, session.filled_slots)
         self._store.update(session)
         return self._next_turn(session)
+
+    def _load_profile(self, user_id: str, domain: str) -> dict[str, str]:
+        if self._db is None:
+            return {}
+        from app.db.models import ContextProfile
+        try:
+            user_uuid = uuid.UUID(user_id)
+        except ValueError:
+            user_uuid = user_id  # type: ignore[assignment]
+        profile = self._db.scalar(
+            select(ContextProfile).where(
+                ContextProfile.user_id == user_uuid,
+                ContextProfile.is_default.is_(True),
+            )
+        )
+        if profile is None:
+            return {}
+        merged = dict(profile.core_context or {})
+        merged.update((profile.domain_overrides or {}).get(domain, {}))
+        return merged
 
     def _next_turn(self, session: SessionState) -> TurnResult:
         slots = load_crs(session.domain)
@@ -72,6 +100,7 @@ class Orchestrator:
                 status="needs_question",
                 question=question,
                 result=None,
+                profile_loaded=bool(session.profile_snapshot),
             )
         return self._generate(session)
 
@@ -86,6 +115,7 @@ class Orchestrator:
             clarity=session.clarity,
             questions_asked=session.questions_asked,
             final_ccs=session.ccs,
+            profile=session.profile_snapshot or None,
             domain_defaults=domain_defaults,
         )
         prompt_text = construct(ctx, model="construct")
@@ -102,6 +132,9 @@ class Orchestrator:
         session.status = "complete"
         self._store.update(session)
 
+        suggest_save = session.user_id is not None and not session.profile_snapshot
+        extractable = dict(session.filled_slots) if suggest_save else {}
+
         return TurnResult(
             session_id=session.id,
             status="done",
@@ -111,6 +144,9 @@ class Orchestrator:
                 score=score_result,
                 prompt_version_id=prompt_version_id,
             ),
+            suggest_profile_save=suggest_save,
+            extractable_slots=extractable,
+            profile_loaded=bool(session.profile_snapshot),
         )
 
     def _flush_to_db(
@@ -127,7 +163,10 @@ class Orchestrator:
         from app.db.models import Session as DBSessionModel
 
         db_session_id = uuid.UUID(session.id)
-        db_user_id = uuid.UUID(session.user_id) if session.user_id else None
+        try:
+            db_user_id = uuid.UUID(session.user_id) if session.user_id else None
+        except ValueError:
+            db_user_id = None
 
         db_session = DBSessionModel(
             id=db_session_id,

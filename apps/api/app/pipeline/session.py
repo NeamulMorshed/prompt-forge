@@ -24,6 +24,7 @@ class SessionState:
     status: str = "active"
     generated_prompt: str | None = None
     prompt_version_id: str | None = None
+    profile_snapshot: dict[str, str] = field(default_factory=dict)
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -41,6 +42,7 @@ class SessionStore:
         intent: str,
         clarity: float,
         user_id: str | None = None,
+        profile_snapshot: dict[str, str] | None = None,
     ) -> SessionState:
         s = SessionState(
             id=str(uuid.uuid4()),
@@ -49,6 +51,7 @@ class SessionStore:
             intent=intent,
             clarity=clarity,
             user_id=user_id,
+            profile_snapshot=profile_snapshot or {},
         )
         self.update(s)
         return s

@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 class StartRequest(BaseModel):
     input: str
+    ignore_profile: bool = False
 
 
 class AnswerRequest(BaseModel):
@@ -35,6 +36,9 @@ class TurnResponse(BaseModel):
     status: str
     question: QuestionOut | None = None
     result: GenerationResultOut | None = None
+    suggest_profile_save: bool = False
+    extractable_slots: dict[str, str] = {}
+    profile_loaded: bool = False
 
 
 class RunRequest(BaseModel):
