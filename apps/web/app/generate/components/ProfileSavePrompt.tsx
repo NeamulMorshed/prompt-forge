@@ -6,7 +6,6 @@ import type { ProfileUpsert } from "@/lib/profile-api";
 
 interface Props {
   extractableSlots: Record<string, string>;
-  sessionId: string;
   isAuthenticated: boolean;
 }
 
@@ -25,10 +24,21 @@ function slotsToProfileUpsert(slots: Record<string, string>): ProfileUpsert {
   };
 }
 
-export function ProfileSavePrompt({ extractableSlots, sessionId, isAuthenticated }: Props) {
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "dismissed">("idle");
+export function ProfileSavePrompt({ extractableSlots, isAuthenticated }: Props) {
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "dismissed" | "error">("idle");
 
   if (state === "dismissed" || state === "saved") return null;
+
+  if (Object.keys(extractableSlots).length === 0) return null;
+
+  if (state === "error") {
+    return (
+      <div className="text-sm text-red-500 border border-red-200 rounded-lg px-4 py-3 flex items-center gap-3">
+        <span>Could not save defaults.</span>
+        <button className="underline" onClick={() => setState("idle")}>Try again</button>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -41,7 +51,7 @@ export function ProfileSavePrompt({ extractableSlots, sessionId, isAuthenticated
     );
   }
 
-  const previewKeys = Object.keys(extractableSlots).slice(0, 3).join(", ");
+  const previewKeys = Object.keys(extractableSlots).slice(0, 3).join(", ") || "your preferences";
 
   async function handleSave() {
     setState("saving");
@@ -50,7 +60,7 @@ export function ProfileSavePrompt({ extractableSlots, sessionId, isAuthenticated
       await upsertProfile(data);
       setState("saved");
     } catch {
-      setState("dismissed");
+      setState("error");
     }
   }
 
