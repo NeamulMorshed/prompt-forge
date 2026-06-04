@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getProfile, upsertProfile } from "@/lib/profile-api";
 
 const DOMAINS = ["marketing_content", "writing_academic"] as const;
@@ -29,6 +29,8 @@ export default function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [noToken, setNoToken] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [core, setCore] = useState<CoreFields>({ tone: "", audience: "", brand_name: "", constraints: "" });
   const [domainSlots, setDomainSlots] = useState<Record<string, Record<string, string>>>({});
@@ -56,8 +58,16 @@ export default function ProfileSettingsPage() {
           );
         }
       })
-      .catch(() => null)
+      .catch(() => {
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
   }, []);
 
   async function handleSave() {
@@ -78,10 +88,12 @@ export default function ProfileSettingsPage() {
       }
       await upsertProfile({ core_context: clean_core, domain_overrides });
       setToast("Profile saved");
-      setTimeout(() => setToast(null), 2500);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setToast(null), 2500);
     } catch {
       setToast("Save failed — are you logged in?");
-      setTimeout(() => setToast(null), 3000);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setToast(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -101,6 +113,16 @@ export default function ProfileSettingsPage() {
     return (
       <main className="min-h-screen flex items-center justify-center p-8">
         <p className="text-gray-400 text-sm animate-pulse">Loading&hellip;</p>
+      </main>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-8">
+        <p className="text-red-500 text-sm">
+          Could not load profile. <a href="/settings/profile" className="underline">Try again</a>
+        </p>
       </main>
     );
   }
