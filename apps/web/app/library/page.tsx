@@ -168,7 +168,7 @@ export default function LibraryPage() {
                 <div className="flex items-center gap-2">
                   {group.domain && (
                     <span className="text-xs bg-gray-100 rounded-full px-2 py-0.5 text-gray-500">
-                      {group.domain.replace("_", " ")}
+                      {group.domain.replaceAll("_", " ")}
                     </span>
                   )}
                   <span className="text-xs text-gray-400 bg-blue-50 rounded-full px-2 py-0.5">
@@ -208,18 +208,22 @@ export default function LibraryPage() {
             {expanded === group.root_prompt_id && (
               <div className="border-t bg-gray-50 px-4 py-3 flex flex-col gap-3">
                 {detailLoading && <p className="text-xs text-gray-400 animate-pulse">Loading versions&hellip;</p>}
-                {detail && detail.prompts.map((prompt, pi) =>
-                  prompt.versions.map((version, vi) => (
+                {detail && (() => {
+                  let counter = 0;
+                  return detail.prompts.flatMap((prompt) =>
+                    prompt.versions.map((version) => {
+                      counter++;
+                      return (
                     <div key={version.id} className="flex items-start justify-between gap-3 border-b last:border-0 pb-3 last:pb-0">
                       <div className="flex flex-col gap-1 flex-1 min-w-0">
                         <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <span>v{pi + vi + 1}</span>
+                          <span>v{counter}</span>
                           <span>{new Date(version.created_at).toLocaleDateString()}</span>
                           {prompt.branched_from_version_id && (
                             <span className="bg-purple-50 text-purple-500 rounded-full px-2 py-0.5">branched</span>
                           )}
                         </div>
-                        <p className="text-xs font-mono text-gray-600 line-clamp-2">{version.content.slice(0, 120)}&hellip;</p>
+                        <p className="text-xs font-mono text-gray-600 line-clamp-2">{version.content.length > 120 ? version.content.slice(0, 120) + "…" : version.content}</p>
                         {editLabel?.versionId === version.id ? (
                           <div className="flex gap-2 mt-1">
                             <input
@@ -253,8 +257,10 @@ export default function LibraryPage() {
                         {branching === version.id ? "Branching…" : "Branch →"}
                       </button>
                     </div>
-                  ))
-                )}
+                      );
+                    })
+                  );
+                })()}
               </div>
             )}
           </div>
