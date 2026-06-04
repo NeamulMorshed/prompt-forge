@@ -144,9 +144,15 @@ def branch_prompt(
         pre_filled_slots = db_session.filled_slots or {}
         initial_input = db_session.initial_input or ""
 
+    if not initial_input:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Original session has no input — cannot branch",
+        )
+
     orch = Orchestrator(router=_llm_router, store=_session_store, db=db)
     turn = orch.start(
-        initial_input=initial_input or "branch",
+        initial_input=initial_input,
         user_id=str(current_user.id),
         pre_filled_slots=pre_filled_slots,
         branched_from_version_id=str(version_id),

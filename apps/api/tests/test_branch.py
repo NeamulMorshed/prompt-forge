@@ -31,7 +31,13 @@ def _make_complete_session(db, user_id: uuid.UUID) -> tuple[Prompt, PromptVersio
         user_id=user_id,
         domain="marketing_content",
         initial_input="write a LinkedIn post",
-        filled_slots={"goal": "get leads", "audience": "founders", "channel": "LinkedIn"},
+        filled_slots={
+            "goal": "get leads",
+            "audience": "founders",
+            "channel": "LinkedIn",
+            "tone": "bold",         # adds 0.12 → total weight 0.65
+            "constraints": "none",  # adds 0.10 → total weight 0.75 ≥ 0.70
+        },
         questions_asked=2,
         ccs=0.85,
         status="complete",
@@ -145,12 +151,12 @@ def test_branch_new_prompt_inherits_group_id(client_with_mock_router):
     )
     assert resp.status_code == 200
     turn = resp.json()
+    assert turn["status"] == "done", f"Expected done, got {turn['status']}"
 
-    if turn["status"] == "done":
-        new_version_id = uuid.UUID(turn["result"]["prompt_version_id"])
-        new_version = db.get(PromptVersion, new_version_id)
-        assert new_version is not None
-        new_prompt = db.get(Prompt, new_version.prompt_id)
-        assert new_prompt is not None
-        assert new_prompt.group_id == original_group_id
-        assert str(new_prompt.branched_from_version_id) == str(v.id)
+    new_version_id = uuid.UUID(turn["result"]["prompt_version_id"])
+    new_version = db.get(PromptVersion, new_version_id)
+    assert new_version is not None
+    new_prompt = db.get(Prompt, new_version.prompt_id)
+    assert new_prompt is not None
+    assert new_prompt.group_id == original_group_id
+    assert str(new_prompt.branched_from_version_id) == str(v.id)
