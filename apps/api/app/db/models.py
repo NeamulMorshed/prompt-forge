@@ -129,6 +129,7 @@ class OutcomeRating(Base):
     skills_applied: Mapped[dict | None] = mapped_column(_Json, nullable=True)
     domain: Mapped[str | None] = mapped_column(String, nullable=True)
     ccs_at_gen: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Pattern(Base):
