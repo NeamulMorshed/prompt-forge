@@ -3,6 +3,8 @@ from app.pipeline.assembler import ContextObject
 _DOMAIN_ROLES = {
     "marketing_content": "direct-response marketing and content strategy",
     "writing_academic": "academic research and scholarly writing",
+    "real_estate_listing": "property marketing and real estate copywriting",
+    "d2c_ad_creative": "direct-to-consumer advertising and conversion copywriting",
     "general": "versatile assistant",
 }
 
@@ -62,6 +64,10 @@ def _task_module(get) -> str:
     channel = get("channel")
     level = get("level")
     length = get("length")
+    property_info = get("property")
+    highlights = get("highlights")
+    product = get("product")
+    offer = get("offer")
     lines = []
     if channel:
         lines.append(f"Format/channel: {channel}")
@@ -69,6 +75,14 @@ def _task_module(get) -> str:
         lines.append(f"Academic level: {level}")
     if length:
         lines.append(f"Target length: {length}")
+    if property_info:
+        lines.append(f"Property: {property_info}")
+    if highlights:
+        lines.append(f"Key highlights to feature: {highlights}")
+    if product:
+        lines.append(f"Product being advertised: {product}")
+    if offer:
+        lines.append(f"Offer/incentive: {offer}")
     return "\n".join(lines)
 
 
@@ -81,6 +95,10 @@ def _format_module(get) -> str:
         "twitter": "Write as a tweet or thread. Each tweet ≤280 characters.",
         "blog": "Structure with: compelling H1, 3–5 H2 sections, conclusion with CTA.",
         "instagram": "Write as an Instagram caption: hook, body, CTA, relevant hashtags.",
+        "mls": "Write as MLS-ready listing: headline (15 words max), description (150-200 words), bullet highlights.",
+        "zillow": "Write as a Zillow listing: 250-word max description, punchy opening, highlight 3 top features.",
+        "facebook": "Write as Facebook ad copy: primary text (125 chars visible), headline (27 chars), description (27 chars). State benefit first.",
+        "google": "Write as Google Search ad: 3 headlines (30 chars each), 2 descriptions (90 chars each). Every character counts.",
     }
     for key, instruction in _FORMAT_MAP.items():
         if key in channel:

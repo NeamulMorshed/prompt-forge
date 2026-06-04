@@ -1,0 +1,17 @@
+{
+  "domain": "real_estate_listing",
+  "description": "Property listing descriptions for MLS, Zillow, and agency sites",
+  "slots": [
+    { "id": "goal",         "weight": 0.18, "required": true,  "hint": "What type of listing — sale, rent, commercial, luxury?" },
+    { "id": "property",     "weight": 0.20, "required": true,  "hint": "Property type, size, bedrooms, location?" },
+    { "id": "audience",     "weight": 0.15, "required": true,  "hint": "Who is the target buyer or renter?" },
+    { "id": "highlights",   "weight": 0.18, "required": true,  "hint": "Top 3-5 features that make this property stand out?" },
+    { "id": "tone",         "weight": 0.10, "required": false, "hint": "Aspirational luxury, family-friendly, investment-focused?" },
+    { "id": "constraints",  "weight": 0.08, "required": false, "hint": "Word count limit, compliance restrictions, brand guidelines?" },
+    { "id": "channel",      "weight": 0.07, "required": false, "hint": "Where will this listing appear — MLS, Zillow, agency site, social?" },
+    { "id": "model_target", "weight": 0.04, "required": false, "hint": "Which AI model will run this prompt?" }
+  ],
+  "domain_defaults": {
+    "tone": "aspirational yet approachable"
+  }
+}

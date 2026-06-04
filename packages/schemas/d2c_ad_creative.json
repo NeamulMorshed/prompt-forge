@@ -1,0 +1,17 @@
+{
+  "domain": "d2c_ad_creative",
+  "description": "Direct-to-consumer ad creative: Facebook/Instagram ads, Google ads, product copy",
+  "slots": [
+    { "id": "goal",         "weight": 0.20, "required": true,  "hint": "Campaign objective — awareness, conversion, retargeting, ROAS target?" },
+    { "id": "product",      "weight": 0.20, "required": true,  "hint": "What product are you advertising — name, key benefit, price point?" },
+    { "id": "audience",     "weight": 0.18, "required": true,  "hint": "Target audience — demographics, interests, pain points?" },
+    { "id": "channel",      "weight": 0.15, "required": true,  "hint": "Ad format — Facebook/Instagram feed, Stories, Google search, display?" },
+    { "id": "tone",         "weight": 0.10, "required": false, "hint": "Brand voice — playful, urgent, authoritative, empathetic?" },
+    { "id": "offer",        "weight": 0.08, "required": false, "hint": "Specific offer, discount, or urgency element?" },
+    { "id": "constraints",  "weight": 0.05, "required": false, "hint": "Character limits, words to avoid, regulatory restrictions?" },
+    { "id": "model_target", "weight": 0.04, "required": false, "hint": "Which AI model will run this prompt?" }
+  ],
+  "domain_defaults": {
+    "tone": "direct and benefit-driven"
+  }
+}

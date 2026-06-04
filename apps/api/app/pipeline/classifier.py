@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from app.llm.router import LLMRouter
 
-_KNOWN_DOMAINS = {"marketing_content", "writing_academic"}
+_KNOWN_DOMAINS = {"marketing_content", "writing_academic", "real_estate_listing", "d2c_ad_creative"}
 
 _SYSTEM_PROMPT = (
     "You are a domain classifier for a prompt-generation tool. "
