@@ -98,6 +98,14 @@ class Prompt(Base):
     model_target: Mapped[str | None] = mapped_column(String, nullable=True)
     skills_applied: Mapped[dict | None] = mapped_column(_Json, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    group_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    branched_from_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("prompt_versions.id", ondelete="SET NULL"), nullable=True
+    )
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class PromptVersion(Base):
