@@ -54,10 +54,11 @@ class ContextProfile(Base):
     id: Mapped[uuid.UUID] = _pk()
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String, default="My defaults")
-    is_default: Mapped[bool] = mapped_column(Boolean, default=True)
-    core_context: Mapped[dict] = mapped_column(_Json, default=dict)
-    domain_overrides: Mapped[dict] = mapped_column(_Json, default=dict)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    core_context: Mapped[dict] = mapped_column(_Json, default=dict, nullable=False)
+    domain_overrides: Mapped[dict] = mapped_column(_Json, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # updated_at: ORM-managed — fires on flush, not raw SQL UPDATE
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
