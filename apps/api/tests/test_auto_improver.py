@@ -97,3 +97,73 @@ class TestAutoImprove:
         mock_edit.assert_called_once()
         call_kwargs = mock_edit.call_args
         assert call_kwargs.kwargs["module_name"] == "context"
+
+
+from fastapi.testclient import TestClient
+from app.main import app
+
+client = TestClient(app)
+
+
+class TestAutoImproveRoute:
+    def test_returns_404_for_missing_version(self):
+        with patch("app.pipeline.routes.auto_improve") as mock_ai:
+            mock_ai.side_effect = ValueError("PromptVersion not found")
+            resp = client.post(
+                "/generate/auto-improve",
+                json={"prompt_version_id": str(uuid.uuid4())},
+            )
+        assert resp.status_code == 404
+
+    def test_returns_improved_version(self):
+        version_id = str(uuid.uuid4())
+        new_version_id = str(uuid.uuid4())
+
+        mock_version = MagicMock()
+        mock_version.id = uuid.UUID(new_version_id)
+        mock_version.content = "Improved prompt text"
+
+        mock_score = MagicMock()
+        mock_score.composite = 78.5
+        mock_score.dimensions = {"clarity": 8.0}
+        mock_score.suggestions = ["Good"]
+        mock_score.scored = True
+
+        with patch("app.pipeline.routes.auto_improve") as mock_ai:
+            mock_ai.return_value = (mock_version, mock_score, "context")
+            resp = client.post(
+                "/generate/auto-improve",
+                json={"prompt_version_id": version_id},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["new_prompt_version_id"] == new_version_id
+        assert data["improved"] is True
+        assert data["rewritten_module"] == "context"
+        assert data["score"]["composite"] == 78.5
+
+    def test_improved_false_when_no_rewrite(self):
+        version_id = str(uuid.uuid4())
+
+        mock_version = MagicMock()
+        mock_version.id = uuid.UUID(version_id)
+        mock_version.content = "Already great prompt"
+
+        mock_score = MagicMock()
+        mock_score.composite = 91.0
+        mock_score.dimensions = {}
+        mock_score.suggestions = []
+        mock_score.scored = True
+
+        with patch("app.pipeline.routes.auto_improve") as mock_ai:
+            mock_ai.return_value = (mock_version, mock_score, None)
+            resp = client.post(
+                "/generate/auto-improve",
+                json={"prompt_version_id": version_id},
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["improved"] is False
+        assert data["rewritten_module"] is None

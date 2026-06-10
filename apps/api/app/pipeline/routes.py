@@ -11,9 +11,12 @@ from app.db.models import Session as SessionModel
 from app.llm.factory import build_router
 from app.pipeline.orchestrator import Orchestrator
 from app.audit.logger import log_event
+from app.pipeline.auto_improver import auto_improve
 from app.pipeline.module_editor import edit_module
 from app.pipeline.schemas import (
     AnswerRequest,
+    AutoImproveRequest,
+    AutoImproveResponse,
     BranchRequest,
     EditModuleRequest,
     EditModuleResponse,
@@ -159,6 +162,38 @@ def edit_prompt_module(
             scored=score_result.scored,
         ),
         full_prompt=new_version.content,
+    )
+
+
+@router.post("/auto-improve", response_model=AutoImproveResponse)
+def auto_improve_prompt(
+    body: AutoImproveRequest,
+    db: Session = Depends(get_db),
+) -> AutoImproveResponse:
+    try:
+        version_id = uuid.UUID(body.prompt_version_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid version ID")
+    try:
+        new_version, score_result, rewritten_module = auto_improve(
+            version_id=version_id,
+            router=_llm_router,
+            db=db,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    return AutoImproveResponse(
+        new_prompt_version_id=str(new_version.id),
+        improved=rewritten_module is not None,
+        score=ScoreOut(
+            composite=score_result.composite,
+            dimensions=score_result.dimensions,
+            suggestions=score_result.suggestions,
+            scored=score_result.scored,
+        ),
+        full_prompt=new_version.content,
+        rewritten_module=rewritten_module,
     )
 
 
