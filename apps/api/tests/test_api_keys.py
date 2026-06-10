@@ -138,3 +138,58 @@ class TestListKeys:
         result = list_keys(user_id=uuid.uuid4(), db=db)
 
         assert result == []
+
+
+from fastapi.testclient import TestClient
+from app.main import app
+from app.auth.deps import get_current_user
+from app.db.base import get_db
+
+client = TestClient(app)
+
+
+def _mock_user():
+    u = MagicMock()
+    u.id = uuid.uuid4()
+    u.plan = "pro"
+    return u
+
+
+class TestKeyRoutes:
+    def test_create_key_returns_raw_key_once(self):
+        user = _mock_user()
+        app.dependency_overrides[get_current_user] = lambda: user
+
+        with patch("app.api_keys.routes.generate_key") as mock_gen:
+            mock_model = MagicMock()
+            mock_model.id = uuid.uuid4()
+            mock_model.name = "Test Key"
+            mock_model.key_prefix = "pf_abc123"
+            from datetime import datetime, timezone
+            mock_model.created_at = datetime.now(timezone.utc)
+            mock_gen.return_value = ("pf_abc123rawkey...", mock_model)
+
+            resp = client.post("/v1/keys", json={"name": "Test Key"})
+
+        app.dependency_overrides.clear()
+        assert resp.status_code == 201
+        data = resp.json()
+        assert "key" in data
+        assert data["key"].startswith("pf_")
+
+    def test_list_keys_requires_auth(self):
+        resp = client.get("/v1/keys")
+        assert resp.status_code == 401
+
+    def test_revoke_key_returns_ok(self):
+        user = _mock_user()
+        app.dependency_overrides[get_current_user] = lambda: user
+        key_id = str(uuid.uuid4())
+
+        with patch("app.api_keys.routes.revoke_key") as mock_rev:
+            mock_rev.return_value = True
+            resp = client.delete(f"/v1/keys/{key_id}")
+
+        app.dependency_overrides.clear()
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
