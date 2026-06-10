@@ -84,3 +84,57 @@ class TestLookupKey:
         db.scalar.return_value = mock_key
         result = lookup_key("valid_key_123", db)
         assert result == mock_key
+
+
+class TestRevokeKey:
+    def test_revokes_owned_key(self):
+        db = MagicMock()
+        user_id = uuid.uuid4()
+        mock_key = MagicMock()
+        mock_key.user_id = user_id
+        db.get.return_value = mock_key
+
+        result = revoke_key(key_id=uuid.uuid4(), user_id=user_id, db=db)
+
+        assert result is True
+        assert mock_key.revoked is True
+        db.commit.assert_called_once()
+
+    def test_returns_false_for_wrong_owner(self):
+        db = MagicMock()
+        mock_key = MagicMock()
+        mock_key.user_id = uuid.uuid4()  # different owner
+        db.get.return_value = mock_key
+
+        result = revoke_key(key_id=uuid.uuid4(), user_id=uuid.uuid4(), db=db)
+
+        assert result is False
+
+    def test_returns_false_for_missing_key(self):
+        db = MagicMock()
+        db.get.return_value = None
+
+        result = revoke_key(key_id=uuid.uuid4(), user_id=uuid.uuid4(), db=db)
+
+        assert result is False
+
+
+class TestListKeys:
+    def test_returns_non_revoked_keys_for_user(self):
+        db = MagicMock()
+        user_id = uuid.uuid4()
+        mock_keys = [MagicMock(revoked=False), MagicMock(revoked=False)]
+        db.scalars.return_value = mock_keys
+
+        result = list_keys(user_id=user_id, db=db)
+
+        assert result == mock_keys
+        db.scalars.assert_called_once()
+
+    def test_returns_empty_list_when_no_keys(self):
+        db = MagicMock()
+        db.scalars.return_value = []
+
+        result = list_keys(user_id=uuid.uuid4(), db=db)
+
+        assert result == []
