@@ -194,7 +194,17 @@ export default function GeneratePage() {
 
       {pageState.phase === "done" && (
         <div className="w-full max-w-2xl flex flex-col gap-6">
-          <PromptOutput result={pageState.result} />
+          <PromptOutput
+            result={pageState.result}
+            onUpdate={(updates) => {
+              if (pageState.phase === "done") {
+                setPageState({
+                  ...pageState,
+                  result: { ...pageState.result, ...updates },
+                });
+              }
+            }}
+          />
           {pageState.suggest_profile_save && !profileDismissed && (
             <ProfileSavePrompt
               extractableSlots={pageState.extractable_slots}

@@ -79,3 +79,16 @@ export const editModule = (promptVersionId: string, moduleName: string, newText:
     module_name: moduleName,
     new_text: newText,
   });
+
+export interface AutoImproveResponse {
+  new_prompt_version_id: string;
+  improved: boolean;
+  score: ScoreOut;
+  full_prompt: string;
+  rewritten_module: string | null;
+}
+
+export const autoImprovePrompt = (promptVersionId: string) =>
+  post<AutoImproveResponse>("/generate/auto-improve", {
+    prompt_version_id: promptVersionId,
+  });
