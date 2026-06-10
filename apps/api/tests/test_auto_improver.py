@@ -98,6 +98,43 @@ class TestAutoImprove:
         call_kwargs = mock_edit.call_args
         assert call_kwargs.kwargs["module_name"] == "context"
 
+    def test_uses_dimension_fallback_when_judge_returns_null_module(self):
+        db = MagicMock()
+        router = MagicMock()
+        version_id = uuid.uuid4()
+        prompt_id = uuid.uuid4()
+
+        mock_version = MagicMock()
+        mock_version.id = version_id
+        mock_version.content = "A weak prompt"
+        mock_version.modules_json = {"role": "Expert", "context": "vague", "objective": "unclear"}
+        mock_version.score_json = {
+            "composite": 55.0,
+            "dimensions": {"clarity": 7, "completeness": 6, "context": 2, "actionability": 7, "goal_align": 6, "ai_perf": 5},
+            "suggestions": ["Add more context"],
+        }
+        mock_version.prompt_id = prompt_id
+        db.get.return_value = mock_version
+
+        router.complete.side_effect = [
+            MagicMock(text="generic output"),   # run
+            MagicMock(text='{"quality": 4, "weakest_module": null, "fix_instruction": "improve"}'),  # judge returns null
+            MagicMock(text="Better context text"),  # rewrite
+        ]
+
+        with patch("app.pipeline.auto_improver.edit_module") as mock_edit:
+            mock_new_version = MagicMock()
+            mock_new_version.id = uuid.uuid4()
+            mock_new_version.content = "Improved prompt"
+            mock_edit.return_value = (mock_new_version, MagicMock(composite=75.0, dimensions={}, suggestions=[], scored=True))
+
+            result_version, score_result, rewritten = auto_improve(version_id, router, db)
+
+        # Should fall back to dimension-based selection: "context" has score 2 (lowest)
+        assert rewritten == "context"
+        mock_edit.assert_called_once()
+        assert mock_edit.call_args.kwargs["module_name"] == "context"
+
 
 from fastapi.testclient import TestClient
 from app.main import app

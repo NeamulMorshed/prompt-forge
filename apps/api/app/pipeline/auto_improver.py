@@ -110,6 +110,15 @@ def auto_improve(
     )
     rewrite_result = router.complete("construct", [{"role": "user", "content": rewrite_prompt}])
     new_module_text = rewrite_result.text.strip()
+    if not new_module_text:
+        # LLM returned empty — return original version unchanged
+        score_result = ScoreResult(
+            composite=composite,
+            dimensions=dimensions,
+            suggestions=current_score_json.get("suggestions", []),
+            scored=True,
+        )
+        return version, score_result, None
 
     new_version, score_result = edit_module(
         version_id=version_id,
