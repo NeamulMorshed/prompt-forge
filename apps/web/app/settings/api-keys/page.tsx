@@ -8,12 +8,17 @@ export default function ApiKeysPage() {
   const [newKeyResult, setNewKeyResult] = useState<CreateKeyResponse | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
+    setLoading(true);
     try {
       setKeys(await listApiKeys());
     } catch {
       setError("Failed to load keys");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -49,6 +54,8 @@ export default function ApiKeysPage() {
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">API Keys</h1>
 
+      {loading && <p className="text-gray-400 text-sm mb-4">Loading…</p>}
+
       {newKeyResult && (
         <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
           <p className="font-semibold mb-2">Copy your key now — it won&apos;t be shown again.</p>
@@ -56,10 +63,18 @@ export default function ApiKeysPage() {
             {newKeyResult.key}
           </code>
           <button
-            onClick={() => { navigator.clipboard.writeText(newKeyResult.key); }}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(newKeyResult.key);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              } catch {
+                // clipboard unavailable
+              }
+            }}
             className="mt-2 text-sm text-blue-600 underline"
           >
-            Copy to clipboard
+            {copied ? "Copied!" : "Copy to clipboard"}
           </button>
         </div>
       )}
