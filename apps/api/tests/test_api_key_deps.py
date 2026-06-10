@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 import pytest
 from unittest.mock import MagicMock, patch
@@ -17,8 +18,7 @@ class TestRateLimitKey:
 class TestValidateApiKey:
     def test_raises_401_when_no_header(self):
         with pytest.raises(HTTPException) as exc_info:
-            import asyncio
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 validate_api_key(api_key=None, db=MagicMock())
             )
         assert exc_info.value.status_code == 401
@@ -28,8 +28,7 @@ class TestValidateApiKey:
         with patch("app.auth.api_key_deps.lookup_key") as mock_lookup:
             mock_lookup.return_value = None
             with pytest.raises(HTTPException) as exc_info:
-                import asyncio
-                asyncio.get_event_loop().run_until_complete(
+                asyncio.run(
                     validate_api_key(api_key="bad_key", db=db)
                 )
         assert exc_info.value.status_code == 401
@@ -45,9 +44,24 @@ class TestValidateApiKey:
              patch("app.auth.api_key_deps._check_rate_limit") as mock_rl:
             mock_lookup.return_value = mock_api_key
             mock_rl.return_value = True
-            import asyncio
-            result = asyncio.get_event_loop().run_until_complete(
+            result = asyncio.run(
                 validate_api_key(api_key="pf_valid_key", db=db)
             )
 
         assert result == mock_api_key.user_id
+
+    def test_raises_429_when_rate_limited(self):
+        db = MagicMock()
+        mock_api_key = MagicMock()
+        mock_api_key.user_id = uuid.uuid4()
+        mock_api_key.id = uuid.uuid4()
+        mock_api_key.rate_limit_per_minute = 60
+
+        with patch("app.auth.api_key_deps.lookup_key") as mock_lookup, \
+             patch("app.auth.api_key_deps._check_rate_limit") as mock_rl:
+            mock_lookup.return_value = mock_api_key
+            mock_rl.return_value = False
+            with pytest.raises(HTTPException) as exc_info:
+                asyncio.run(validate_api_key(api_key="pf_valid_key", db=db))
+
+        assert exc_info.value.status_code == 429

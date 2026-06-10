@@ -23,12 +23,15 @@ def _rate_limit_key(api_key_id: uuid.UUID, minute: int) -> str:
 def _check_rate_limit(api_key_id: uuid.UUID, limit: int) -> bool:
     if _redis is None:
         return True  # no Redis → skip rate limiting
-    minute = int(datetime.now(timezone.utc).timestamp() // 60)
-    rk = _rate_limit_key(api_key_id, minute)
-    count = _redis.incr(rk)
-    if count == 1:
-        _redis.expire(rk, 120)  # 2-minute TTL
-    return count <= limit
+    try:
+        minute = int(datetime.now(timezone.utc).timestamp() // 60)
+        rk = _rate_limit_key(api_key_id, minute)
+        count = _redis.incr(rk)
+        if count == 1:
+            _redis.expire(rk, 120)  # 2-minute TTL
+        return count <= limit
+    except Exception:
+        return True  # degrade gracefully on runtime Redis failure
 
 
 async def validate_api_key(
