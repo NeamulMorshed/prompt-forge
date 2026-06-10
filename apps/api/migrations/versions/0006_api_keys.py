@@ -22,7 +22,7 @@ def upgrade() -> None:
         sa.Column("key_hash", sa.String(64), unique=True, nullable=False),
         sa.Column("key_prefix", sa.String(8), nullable=False),
         sa.Column("rate_limit_per_minute", sa.Integer(), default=60, nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("revoked", sa.Boolean(), default=False, nullable=False),
     )

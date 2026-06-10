@@ -187,7 +187,7 @@ class ApiKey(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)  # SHA-256 hex
     key_prefix: Mapped[str] = mapped_column(String(8), nullable=False)              # first 8 chars for display
-    rate_limit_per_minute: Mapped[int] = mapped_column(Integer, default=60)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    rate_limit_per_minute: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
