@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { GenerationResult, ScoreOut } from "@/lib/generate-api";
-import { runPrompt, ratePrompt } from "@/lib/generate-api";
+import { runPrompt, ratePrompt, autoImprovePrompt } from "@/lib/generate-api";
 import { ModuleEditor } from "./ModuleEditor";
 
 interface Props {
@@ -16,6 +16,8 @@ export function PromptOutput({ result, onUpdate }: Props) {
   const [running, setRunning] = useState(false);
   const [output, setOutput] = useState<string | null>(null);
   const [rated, setRated] = useState<1 | -1 | null>(null);
+  const [improving, setImproving] = useState(false);
+  const [improveMessage, setImproveMessage] = useState<string | null>(null);
 
   async function handleCopy() {
     await navigator.clipboard.writeText(result.prompt);
@@ -38,6 +40,27 @@ export function PromptOutput({ result, onUpdate }: Props) {
   async function handleRate(rating: 1 | -1) {
     setRated(rating);
     await ratePrompt(result.prompt_version_id, rating).catch(() => null);
+  }
+
+  async function handleAutoImprove() {
+    setImproving(true);
+    setImproveMessage(null);
+    try {
+      const res = await autoImprovePrompt(result.prompt_version_id);
+      if (!res.improved) {
+        setImproveMessage("Already high quality — no changes made");
+      } else {
+        onUpdate?.({
+          prompt_version_id: res.new_prompt_version_id,
+          score: res.score,
+          prompt: res.full_prompt,
+        });
+      }
+    } catch (e) {
+      setImproveMessage(e instanceof Error ? e.message : "Auto-improve failed");
+    } finally {
+      setImproving(false);
+    }
   }
 
   const score = result.score;
@@ -82,7 +105,17 @@ export function PromptOutput({ result, onUpdate }: Props) {
         >
           {running ? "Running…" : "Run it →"}
         </button>
+        <button
+          className="border rounded px-5 py-2 text-sm font-medium disabled:opacity-40"
+          onClick={handleAutoImprove}
+          disabled={improving}
+        >
+          {improving ? "Improving…" : "Auto-Improve ✦"}
+        </button>
       </div>
+      {improveMessage && (
+        <p className="text-sm text-gray-500">{improveMessage}</p>
+      )}
 
       {output && (
         <div className="border rounded-lg p-4 bg-white">

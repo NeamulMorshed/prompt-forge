@@ -85,3 +85,15 @@ class EditModuleResponse(BaseModel):
     new_prompt_version_id: str
     score: ScoreOut
     full_prompt: str
+
+
+class AutoImproveRequest(BaseModel):
+    prompt_version_id: str
+
+
+class AutoImproveResponse(BaseModel):
+    new_prompt_version_id: str
+    improved: bool          # False if already high-scoring (≥85), no rewrite done
+    score: ScoreOut
+    full_prompt: str
+    rewritten_module: str | None = None   # which module was changed, if any
