@@ -7,9 +7,9 @@ class EmbedStartRequest(BaseModel):
 
 
 class EmbedAnswerRequest(BaseModel):
-    session_id: str
-    slot_id: str
-    answer: str
+    session_id: str = Field(..., min_length=1)
+    slot_id: str = Field(..., min_length=1)
+    answer: str = Field(..., min_length=1)
 
 
 class EmbedQuestionOut(BaseModel):

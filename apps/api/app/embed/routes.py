@@ -26,7 +26,7 @@ def _orch_for_user(db: Session) -> Orchestrator:
     return Orchestrator(router=llm_router, store=_store, db=db)
 
 
-def _turn_to_embed(turn) -> EmbedTurnResponse:
+def _turn_to_embed(turn: "TurnResult") -> EmbedTurnResponse:
     question_out = None
     if turn.question:
         question_out = EmbedQuestionOut(
